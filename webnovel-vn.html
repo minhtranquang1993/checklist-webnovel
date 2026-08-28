@@ -1,0 +1,1737 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checklist SEO / GEO / AIO — webnovel.vn</title>
+<link rel="stylesheet" href="assets/checklist.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>Checklist SEO / GEO / AIO — webnovel.vn</h1>
+  <p class="sub">Bản làm việc kèm hướng dẫn từng bước. Tick xong lưu lên server — cả team thấy chung.</p>
+  <div class="meta">
+    <span class="chip">Ngày audit: 06/08/2026</span>
+    <span class="chip">Crawl thật: 6 loại trang</span>
+    <span class="chip">231 URL truyện · 24 sitemap · 15 user-agent</span>
+    <span class="chip">Mọi con số là số đo thật từ HTTP response</span>
+  </div>
+  <div class="idbar" id="idbar"></div>
+  <div class="needname" id="needname" style="display:none">
+    Chưa nhập tên nên chưa tick được. Nhập tên ở ô phía trên — tên này hiện cạnh mỗi hạng mục bạn tick,
+    để cả team biết ai đã làm việc gì.
+  </div>
+  <div class="scores" id="scores"></div>
+</header>
+
+<div class="progwrap">
+  <div class="progtop">
+    <b id="progtxt">0 / 0 hạng mục</b>
+    <span style="color:var(--muted);font-size:13px" id="progpct">0%</span>
+  </div>
+  <div class="progbar"><i id="progbar"></i></div>
+  <div class="filters" id="filters">
+    <button data-f="all" class="on">Tất cả</button>
+    <button data-f="P0">P0 · Chí tử</button>
+    <button data-f="P1">P1 · Lớn</button>
+    <button data-f="P2">P2 · Quan trọng</button>
+    <button data-f="P3">P3 · Nâng cao</button>
+    <button data-f="GEO">GEO / AIO</button>
+    <button data-f="BL">Backlink</button>
+    <button data-f="VFY">Lệnh verify</button>
+    <button data-f="todo">Chưa xong</button>
+    <div class="tools">
+      <button id="expandAll">Mở hết</button>
+      <button id="collapseAll">Thu hết</button>
+      <button id="reset">Xoá tick</button>
+    </div>
+  </div>
+</div>
+
+<div id="content"></div>
+
+<footer>
+  <p><a href="index.html">← Về danh sách checklist</a></p>
+  <p><b>Cách dùng:</b> nhập tên một lần, click vào dòng để mở hướng dẫn chi tiết, click ô vuông để
+  đánh dấu xong. Tick lưu lên server nên đổi máy vẫn còn, và cả team thấy cùng một tiến độ.
+  Mất mạng vẫn tick được — trang giữ lại và tự đẩy lên khi có mạng, lúc đó chỗ ghi tên sẽ hiện
+  "chưa lưu". Nút <b>Xoá tick</b> bỏ tick cho <b>cả team</b>, không chỉ máy bạn.</p>
+  <p><b>Cập nhật 27/08/2026:</b> đã đo lại live và tick thêm 6 hạng mục — toàn bộ nhóm
+  <b>P0-2 (crawl path chương)</b> coi như xong: <code>p0-2a</code> (danh sách chương
+  render server-side, 20 link/trang), <code>p0-2b</code> (trang phân trang
+  <code>/[slug]/[trang]/</code>, canonical tự trỏ), <code>p0-2c</code>
+  (<code>rel="prev"/"next"</code> đã có), <code>p0-2e</code> (link về danh sách chương —
+  phần nhảy 10/50/100 chương chưa làm), <code>p1-2c</code> (<code>?page=N</code> → 301 →
+  <code>/N/</code>), <code>p1-4b</code> (description trang chương lấy từ nội dung thật).
+  Tổng đã xong: <b>17 hạng mục</b>. Điểm <i>Crawlability</i> nâng từ 3 lên 7.</p>
+  <p><b>Ba việc còn hở phát hiện khi đo lại 27/08:</b></p>
+  <ul>
+   <li>Trang <code>/[slug]/[trang]/</code> <b>chưa có trong sitemap nào</b> (0 URL dạng
+       <code>/slug/số/</code> trong <code>sitemap_story_0</code> và <code>sitemap_misc</code>)
+       → gộp vào <code>p0-3a</code></li>
+   <li><code>/kiem-khieu-linh-tieu/?page=2</code>, <code>?trang=2</code>, <code>?p=2</code>
+       vẫn trả <b>200</b> nội dung trùng trang 1 → phần còn lại của <code>p1-2c</code></li>
+   <li>Trang chương chỉ có link prev/self/next, <b>không</b> có link về đúng trang danh sách
+       chứa chương đó → phần còn lại của <code>p0-2e</code></li>
+  </ul>
+  <p><b>Cập nhật 26/08/2026:</b> đã đo lại live và tick thêm 6 hạng mục — <code>p0-2d</code>
+  (breadcrumb HTML trang chương), <code>p0-3c</code> (sitemap truyện còn 231 URL, 4 URL lỗi đã
+  dọn sạch), <code>p0-3d</code> (<code>/sitemap.xml</code> → 301), <code>p1-2b</code>
+  (URL chữ hoa hết trùng lặp — bằng 404, không phải 301), <code>p1-4a</code> (title trang chương
+  đã có tên chương), <code>p2-6b</code> (0/71 ảnh homepage thiếu width/height).
+  Tổng đã xong: <b>11 hạng mục</b>.</p>
+  <p><b>Riêng <code>p1-4c</code> chưa tick:</b> title và <code>WebPage.name</code> đã sạch, nhưng
+  node <code>BookChapter.name</code> trong JSON-LD vẫn là
+  <code>"Chương 1: Chương 1: Phong Tuyết Cừu Sát"</code> — còn một chỗ sinh tên chương trong code
+  chưa sửa.</p>
+  <p><b>Cập nhật 24/08/2026:</b> 5 hạng mục đã tick sẵn theo tiến độ Minh báo —
+  <code>p0-1a</code>, <code>p0-1b</code>, <code>p0-1c</code> (bot AI + robots.txt),
+  <code>p1-1a</code> (schema homepage), <code>p1-3a</code> (404 thật). Tất cả đã verify lại
+  trên site live. Thêm mới <code>p0-1e</code>: chặn thật nhóm bot training ở tầng
+  nginx/Cloudflare, vì <code>robots.txt</code> một mình không chặn được.</p>
+  <p>Tài liệu phân tích đầy đủ nằm ở file <code>webnovel-vn-audit-seo-geo-aio.md</code>.</p>
+</footer>
+</div>
+
+<script src="assets/config.js"></script>
+<script>
+const CHECKLIST_ID = 'webnovel-vn';
+const SCORES=[
+ ["Technical SEO",7,"Pagination đã chuẩn hoá; còn ?page= ở trang truyện và sitemap chương"],
+ ["On-page SEO",8,"Title + description trang chương đã sửa xong"],
+ ["Structured Data",7,"Homepage đã có Organization + WebSite; còn thiếu Open Graph"],
+ ["Crawlability",7,"Chương đã crawl được: DS chương server-side + phân trang + prev/next"],
+ ["GEO / AIO",5,"Bot AI đã vào được; llms.txt đã đọc được, còn nội dung GEO chưa làm"],
+ ["Content",5,"Blog cannibalization nặng"],
+ ["E-E-A-T",6,"Đã có Organization schema + sameAs; còn thiếu trang tác giả"],
+ ["Performance",6,"HTTP/2 + Brotli tốt, 6 file JS chặn render"],
+];
+
+/* ---------- DỮ LIỆU CHECKLIST ---------- */
+const SECTIONS=[
+{
+ id:"P0", tag:"t-p0", title:"P0 — Ba lỗi chí tử",
+ note:"Làm trong 48h. Ba lỗi này đang chặn phần lớn tiềm năng của site. Mọi việc khác làm trước đều lãng phí.",
+ items:[
+
+ {id:"p0-1a", t:"Tìm cho ra nguồn chặn AI bot", w:"ĐÃ XONG — chặn 403 đã gỡ, bot AI vào được bình thường",
+  e:"1–3h", b:`
+  <div class="callout good"><b>Đã xử lý xong.</b> Đo lại ngày 24/08/2026: các bot AI đều trả
+  <b>200</b> ở trang chủ, <code>/robots.txt</code> và <code>/llms.txt</code>.
+  Lớp chặn 403 ở tầng server đã được gỡ.</div>
+
+  <h4>Số đo hiện tại (24/08/2026)</h4>
+  <table><tr><th>Bot</th><th>Trang chủ</th><th>robots.txt</th><th>llms.txt</th></tr>
+  <tr><td>OAI-SearchBot</td><td class="good">200</td><td class="good">200</td><td class="good">200</td></tr>
+  <tr><td>ChatGPT-User</td><td class="good">200</td><td class="good">200</td><td class="good">200</td></tr>
+  <tr><td>PerplexityBot</td><td class="good">200</td><td class="good">200</td><td class="good">200</td></tr>
+  <tr><td>ClaudeBot</td><td class="good">200</td><td class="good">200</td><td class="good">200</td></tr>
+  <tr><td>Googlebot</td><td class="good">200</td><td class="good">200</td><td class="good">200</td></tr></table>
+
+  <h4>Số đo cũ trước khi sửa (để đối chiếu)</h4>
+  <p>9/15 user-agent từng nhận <b>403</b>:</p>
+  <table><tr><th>Bot</th><th>Status</th><th>Hệ quả</th></tr>
+  <tr><td>GPTBot</td><td class="bad">403</td><td>ChatGPT không index được</td></tr>
+  <tr><td>OAI-SearchBot</td><td class="bad">403</td><td>ChatGPT Search không trích dẫn được</td></tr>
+  <tr><td>ChatGPT-User</td><td class="bad">403</td><td>User hỏi ChatGPT về site → không đọc được</td></tr>
+  <tr><td>PerplexityBot</td><td class="bad">403</td><td>Perplexity không trích dẫn được</td></tr>
+  <tr><td>ClaudeBot</td><td class="bad">403</td><td>Claude không đọc được</td></tr>
+  <tr><td>Claude-Web</td><td class="bad">403</td><td>Claude không đọc được</td></tr>
+  <tr><td>CCBot (Common Crawl)</td><td class="bad">403</td><td>Không vào dataset chung</td></tr>
+  <tr><td>Amazonbot</td><td class="bad">403</td><td>Alexa/Rufus không đọc được</td></tr>
+  <tr><td>meta-externalagent</td><td class="bad">403</td><td>Meta AI không đọc được</td></tr>
+  <tr><td>Googlebot / Google-Extended</td><td class="good">200</td><td>OK</td></tr>
+  <tr><td>Bingbot / Applebot</td><td class="good">200</td><td>OK</td></tr>
+  <tr><td>facebookexternalhit / Twitterbot</td><td class="good">200</td><td>OK</td></tr></table>
+
+  <div class="callout"><b>Đã giải quyết:</b> <code>llms.txt</code> (11.596 bytes) giờ trả 200 cho
+  mọi bot AI được phép — file đã thực sự phục vụ được mục đích của nó.</div>
+
+  <h4>Cách đã truy ra nguồn chặn (lưu lại để tham chiếu)</h4>
+  <p>Response 403 có body đúng 25 bytes <code>Your request was blocked.</code>,
+  <code>content-type: text/plain</code>, kèm header
+  <code>cache-control: private, max-age=0, no-store, no-cache, must-revalidate, post-check=0, pre-check=0</code>.</p>
+  <p>Cụm <code>post-check=0, pre-check=0</code> là đặc trưng của PHP
+  (<code>session_cache_limiter</code> mặc định), <b>không phải trang chặn của Cloudflare</b> —
+  Cloudflare khi chặn trả HTML kèm <code>error code: 1020</code>.
+  Vậy khả năng cao nhất là <b>code ở origin đang chặn</b>.</p>
+
+  <p><b>Bước 1 — tìm trong code PHP (khả năng cao nhất):</b></p>
+<pre><code>ssh root@YOUR_SERVER
+grep -rn "GPTBot\\|ClaudeBot\\|PerplexityBot\\|CCBot\\|Amazonbot\\|anthropic\\|HTTP_USER_AGENT" \\
+  /path/to/webroot --include=*.php | head -40</code></pre>
+
+  <p><b>Bước 2 — tìm trong cấu hình server:</b></p>
+<pre><code>grep -rn "GPTBot\\|ClaudeBot\\|PerplexityBot\\|user_agent" \\
+  /etc/nginx/ /path/to/webroot/.htaccess 2>/dev/null</code></pre>
+  <p>Với Nginx tìm khối dạng <code>if ($http_user_agent ~* "GPTBot|ClaudeBot") { return 403; }</code></p>
+
+  <p><b>Bước 3 — kiểm tra Cloudflare:</b></p>
+  <ul>
+   <li>Security → Bots → tắt <b>"Block AI Scrapers and Crawlers"</b> nếu đang bật</li>
+   <li>Security → WAF → Custom rules → tìm rule lọc theo <code>User-Agent</code></li>
+   <li>Security → WAF → Managed rules → xem có rule AI bot nào bật không</li>
+  </ul>`},
+
+ {id:"p0-1b", t:"Chốt chiến lược AI bot: mở chọn lọc hay chặn hết", w:"ĐÃ CHỐT — Hướng A: mở danh mục + trang truyện, chặn nội dung chương",
+  e:"30 phút", b:`
+  <div class="callout good"><b>Quyết định đã chốt: Hướng A có siết thêm.</b>
+  Bot AI có trả link về site được đọc trang chủ, danh mục, trang truyện, tác giả, blog,
+  <code>llms.txt</code> và sitemap. Nội dung chương <b>không cho đọc</b>, trừ
+  <code>chuong-1</code> để chừa một chương đọc thử. Bot training chặn toàn bộ.</div>
+
+  <p>Site anh là <b>nội dung có bản quyền</b>, nên không phải cứ mở hết là tốt.
+  Phân biệt hai loại bot AI:</p>
+  <ul>
+   <li><b>Bot tìm kiếm / trả lời:</b> đọc trang khi user hỏi, và <b>có gắn link về site anh</b> → mang lại traffic thật</li>
+   <li><b>Bot training:</b> hút dữ liệu về huấn luyện model, <b>không trả lại gì</b> → mất nội dung miễn phí</li>
+  </ul>
+
+  <h4>Cấu trúc URL cho phép tách được hai tầng này</h4>
+  <table><tr><th>Loại trang</th><th>Đường dẫn</th><th>Bot AI</th></tr>
+  <tr><td>Danh mục</td><td><code>/tien-hiep/</code></td><td class="good">Cho đọc</td></tr>
+  <tr><td>Trang truyện</td><td><code>/van-co-than-de/</code></td><td class="good">Cho đọc</td></tr>
+  <tr><td>Chương 1</td><td><code>/van-co-than-de/chuong-1/</code></td><td class="good">Cho đọc</td></tr>
+  <tr><td>Chương 2 trở đi</td><td><code>/van-co-than-de/chuong-2/</code></td><td class="bad">Chặn</td></tr></table>
+  <p>Chương luôn nằm ở <b>tầng 2</b>, danh mục và trang truyện ở <b>tầng 1</b>.
+  Nhờ vậy một dòng <code>Disallow: /*/chuong-</code> chặn đúng chương mà không đụng tới
+  danh mục hay trang truyện.</p>
+
+  <h4>Hai lỗi tên bot đã sửa khi chốt</h4>
+  <ul>
+   <li><code>ClaudeBot</code> là bot <b>hút dữ liệu training</b> → đã chuyển xuống nhóm chặn.
+   Hai bot có trả link về site là <code>Claude-User</code> (khi user hỏi) và
+   <code>Claude-SearchBot</code> (index cho search) → đã đưa lên nhóm cho phép.</li>
+   <li><code>Applebot-Extended</code> là cờ opt-out training của Apple → phải
+   <code>Disallow</code>, không phải <code>Allow</code>. Bot đọc để trả lời là
+   <code>Applebot</code>.</li>
+  </ul>
+
+  <h4>Hướng B — chặn hết (đã loại)</h4>
+  <p>Nếu quyết định không cho AI đụng vào nội dung thì <b>phải xoá <code>llms.txt</code></b> đi
+  để khỏi mâu thuẫn, và chấp nhận bỏ hoàn toàn kênh GEO.
+  Không khuyến nghị: đối thủ mở thì AI sẽ trích dẫn đối thủ.</p>
+
+  <div class="callout">Lưu ý kỹ thuật: <code>robots.txt</code> chỉ là <i>lời đề nghị</i>.
+  Việc chặn thật nằm ở tầng server (đang trả 403). Sửa robots.txt mà không sửa code chặn
+  thì bot vẫn nhận 403.</div>`},
+
+ {id:"p0-1c", t:"Cấu hình lại robots.txt theo chiến lược đã chọn + gỡ chặn ở tầng server", w:"ĐÃ XONG — robots.txt mới đã lên, chặn 403 đã gỡ",
+  e:"1h", b:`
+  <div class="callout good"><b>Đã hoàn thành cả hai tầng.</b> Chặn 403 ở origin đã gỡ,
+  <code>/robots.txt</code> đã thay bằng bản tách nhóm bot AI, <code>/llms.txt</code> và
+  <code>/sitemap/sitemap.xml</code> đều trả 200.</div>
+
+  <h4>robots.txt đang chạy — phần bot AI</h4>
+<pre><code>User-agent: OAI-SearchBot
+Allow: /*/chuong-1/$
+Allow: /*/chuong-1$
+Disallow: /*/chuong-
+Disallow: /pub/
+Disallow: /app/</code></pre>
+  <p>Lặp lại y hệt cho <code>ChatGPT-User</code>, <code>Claude-User</code>,
+  <code>Claude-SearchBot</code>, <code>PerplexityBot</code>, <code>Applebot</code>.</p>
+
+  <h4>Vì sao hai dòng Allow thắng được Disallow</h4>
+  <p>Google chọn luật có <b>path dài nhất</b>. <code>/*/chuong-1/$</code> (16 ký tự) dài hơn
+  <code>/*/chuong-</code> (10 ký tự) nên Allow thắng ở chương 1. Dấu <code>$</code> khoá cứng
+  phần cuối, nên <code>chuong-10</code> và <code>chuong-100</code> vẫn rơi về Disallow.
+  Dòng thứ hai không có dấu <code>/</code> cuối để phủ cả URL dạng
+  <code>/slug/chuong-1</code>.</p>
+
+  <h4>Nhóm training vẫn chặn sạch</h4>
+<pre><code>User-agent: GPTBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Amazonbot
+Disallow: /
+
+User-agent: meta-externalagent
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: Applebot-Extended
+Disallow: /</code></pre>
+
+  <h4>Đã kiểm case dễ sập</h4>
+  <p>Truyện <code>/tu-nguoi-go-chuong-tro-thanh-lao-to-tong-mon-phai/</code> có chữ "chuong"
+  trong slug nhưng <b>không bị chặn</b>, vì pattern yêu cầu dấu <code>/</code> ngay trước
+  <code>chuong-</code>. Đã chạy 47 case kiểm tra theo đúng spec Google, tất cả đúng.</p>
+
+  <div class="callout warn"><b>Còn thiếu tầng thật:</b> đo lại thì
+  <code>/kiem-khieu-linh-tieu/chuong-1/</code> vẫn trả <b>200</b> cho cả
+  <code>GPTBot</code>, <code>CCBot</code> và <code>Bytespider</code> — tức tầng server
+  không chặn gì. <code>robots.txt</code> chỉ là <i>lời đề nghị</i>: bot tôn trọng thì nghe,
+  bot không tôn trọng vẫn lấy được nội dung chương. Muốn chặn thật phải chặn theo user-agent
+  ở nginx hoặc Cloudflare. Xem hạng mục <b>p0-1e</b>.</div>`},
+
+ {id:"p0-1e", t:"Chặn thật nhóm bot training ở tầng nginx/Cloudflare", w:"robots.txt chỉ là lời đề nghị — bot xấu vẫn đọc được chương",
+  e:"1h", b:`
+  <p>Đo ngày 24/08/2026 trên <code>/kiem-khieu-linh-tieu/chuong-1/</code>:</p>
+<pre><code>GPTBot/1.2      → 200
+CCBot/2.0       → 200
+Bytespider      → 200
+# Không có tầng chặn nào ngoài robots.txt</code></pre>
+
+  <p>Với nội dung có bản quyền, nhóm bot training nên bị chặn cứng, không chỉ khuyên.
+  Ví dụ cấu hình Nginx:</p>
+<pre><code>map $http_user_agent $block_ai {
+    default            0;
+    "~*GPTBot"         1;
+    "~*ClaudeBot"      1;
+    "~*CCBot"          1;
+    "~*Amazonbot"      1;
+    "~*Bytespider"     1;
+    "~*meta-externalagent" 1;
+}
+
+server {
+    if ($block_ai) { return 403; }
+}</code></pre>
+
+  <p><b>Cẩn thận hai điểm:</b></p>
+  <ul>
+   <li>Pattern <code>ClaudeBot</code> đặt trước, và <b>không</b> dùng pattern chung chung
+   kiểu <code>~*Claude</code> — nó sẽ chặn oan <code>Claude-User</code> và
+   <code>Claude-SearchBot</code> là hai bot anh muốn cho vào.</li>
+   <li>Tương tự, <code>~*Applebot</code> sẽ chặn cả <code>Applebot-Extended</code> lẫn
+   <code>Applebot</code>. Nếu muốn chặn riêng bản Extended thì phải khớp đúng chuỗi đó.</li>
+  </ul>
+  <p><b>Verify sau khi làm:</b> GPTBot phải nhận 403, còn OAI-SearchBot vào trang truyện
+  phải vẫn 200.</p>`},
+
+ {id:"p0-1d", t:"Verify: bot được phép trả 200, chương bị chặn đúng", w:"Không verify thì không biết đã sửa đúng chưa",
+  e:"5 phút", b:`
+  <p><b>Bước 1 — bot được phép phải vào được (đã pass 24/08/2026):</b></p>
+<pre><code>for ua in "OAI-SearchBot/1.0" "ChatGPT-User/1.0" "PerplexityBot/1.0" \\
+          "Claude-User/1.0" "Claude-SearchBot/1.0"; do
+  printf "%-22s " "$ua"
+  curl -s -o /dev/null -A "$ua" -w "%{http_code}\\n" https://webnovel.vn/
+done
+# Kỳ vọng: tất cả 200
+
+curl -s -o /dev/null -A "PerplexityBot/1.0" -w "llms.txt: %{http_code}\\n" \\
+  https://webnovel.vn/llms.txt
+# Kỳ vọng: 200
+
+curl -s -o /dev/null -A "PerplexityBot/1.0" -w "sitemap: %{http_code}\\n" \\
+  https://webnovel.vn/sitemap/sitemap.xml
+# Kỳ vọng: 200</code></pre>
+
+  <p><b>Bước 2 — kiểm luật robots.txt bằng công cụ:</b> dán nội dung robots.txt vào
+  robots.txt Tester (hoặc Google Search Console → robots.txt report) rồi thử lần lượt:</p>
+  <table><tr><th>URL thử</th><th>Kỳ vọng với OAI-SearchBot</th></tr>
+  <tr><td><code>/tien-hiep/</code></td><td class="good">Allowed</td></tr>
+  <tr><td><code>/van-co-than-de/</code></td><td class="good">Allowed</td></tr>
+  <tr><td><code>/van-co-than-de/chuong-1/</code></td><td class="good">Allowed</td></tr>
+  <tr><td><code>/van-co-than-de/chuong-2/</code></td><td class="bad">Blocked</td></tr>
+  <tr><td><code>/van-co-than-de/chuong-100/</code></td><td class="bad">Blocked</td></tr>
+  <tr><td><code>/tu-nguoi-go-chuong-tro-thanh-lao-to-tong-mon-phai/</code></td><td class="good">Allowed</td></tr></table>
+  <p>Dòng cuối là case dễ sập nhất: slug truyện có chữ "chuong" nhưng không được bị chặn.</p>
+
+  <p><b>Bước 3 — kiểm Googlebot vẫn đọc được chương</b> (đây là kênh SEO chính, không được
+  chặn oan):</p>
+<pre><code>curl -s -o /dev/null -A "Googlebot/2.1" -w "%{http_code}\\n" \\
+  https://webnovel.vn/kiem-khieu-linh-tieu/chuong-380/
+# Kỳ vọng: 200</code></pre>`},
+
+ {id:"p0-2a", t:"Render danh sách chương server-side trên trang truyện (≥50 link)", w:"ĐÃ XONG — chương đã in vào HTML, nhưng 20 link/trang thay vì ≥50 (đo 27/08/2026)",
+  e:"1 ngày", b:`
+  <div class="callout good"><b>Đã hoàn thành phần cốt lõi.</b> Danh sách chương giờ render
+  server-side, không còn phụ thuộc AJAX. Googlebot đã thấy được chương ngay trong HTML tĩnh.</div>
+
+  <h4>Số đo lại 27/08/2026</h4>
+<pre><code>curl -s https://webnovel.vn/van-co-than-de-truyen/ \\
+  | grep -o 'href="[^"]*chuong-[0-9]*[^"]*"' | sort -u | wc -l
+# Trước: 0  →  Hiện tại: 20   ✓ (đã có link thật trong HTML)
+
+curl -s https://webnovel.vn/kiem-khieu-linh-tieu/ | ... | wc -l
+# 20   ✓</code></pre>
+
+  <div class="callout warn"><b>Khác với đề xuất ban đầu:</b> checklist đề nghị in
+  <b>50–100 link</b>/trang, thực tế đang là <b>20 link</b>/trang. Không sai, nhưng làm số trang
+  danh sách tăng gấp 2,5–5 lần: truyện 9008 chương cần <b>451 trang</b> thay vì 91–180 trang.
+  Googlebot phải bò nhiều trang hơn để phủ hết. Nếu nâng lên 50–100 chương/trang thì số trang
+  giảm mạnh mà vẫn nhẹ. Không gấp — cấu trúc đã crawl được là thắng lợi chính.</div>
+
+  <h4>Số đo cũ trước khi sửa (để đối chiếu)</h4>
+  <p>Trên <code>https://webnovel.vn/van-co-than-de-truyen/</code>:</p>
+<pre><code>Hiển thị cho người dùng:   "9008 chương"
+Số link chương trong HTML: 0</code></pre>
+  <p>Tab "DS. chương" load bằng AJAX (thuộc tính <code>data-page="1"</code>).
+  Googlebot <b>không click được tab</b>, nên không thấy chương nào.</p>
+
+  <h4>Cách sửa</h4>
+  <p>In sẵn vào HTML tối thiểu 50–100 link chương đầu. Giữ AJAX cho trải nghiệm người dùng
+  cũng được, nhưng phải có bản HTML tĩnh làm nền:</p>
+<pre><code>&lt;nav aria-label="Danh sách chương" class="chapter-list"&gt;
+  &lt;h2&gt;Danh sách chương&lt;/h2&gt;
+  &lt;ul&gt;
+    &lt;li&gt;&lt;a href="/van-co-than-de-truyen/chuong-1/"&gt;Chương 1: Trọng sinh&lt;/a&gt;&lt;/li&gt;
+    &lt;li&gt;&lt;a href="/van-co-than-de-truyen/chuong-2/"&gt;Chương 2: ...&lt;/a&gt;&lt;/li&gt;
+    &lt;!-- ... 100 chương --&gt;
+  &lt;/ul&gt;
+  &lt;a href="/van-co-than-de-truyen/danh-sach-chuong/2/" rel="next"&gt;Xem chương tiếp theo →&lt;/a&gt;
+&lt;/nav&gt;</code></pre>
+  <h4>Verify</h4>
+<pre><code>curl -s https://webnovel.vn/van-co-than-de-truyen/ \\
+  | grep -o 'href="[^"]*chuong-[0-9]*[^"]*"' | sort -u | wc -l
+# Ban đầu: 0 — Hiện tại: 20 ✓ — Lý tưởng: >= 50</code></pre>`},
+
+ {id:"p0-2b", t:"Tạo trang danh sách chương phân trang crawl được", w:"ĐÃ XONG — dùng /[slug]/[trang]/ thay vì /danh-sach-chuong/, canonical tự trỏ (27/08/2026)",
+  e:"1–2 ngày", b:`
+  <div class="callout good"><b>Đã hoàn thành.</b> Trang danh sách chương phân trang đã có,
+  crawl được bằng thẻ <code>&lt;a href&gt;</code> thật, mỗi trang canonical về chính nó.</div>
+
+  <h4>URL thực tế khác đề xuất</h4>
+  <p>Checklist đề xuất <code>/[slug]/danh-sach-chuong/[trang]/</code>, thực tế triển khai gọn hơn:
+  <code>/[slug]/[trang]/</code>. <b>Tốt hơn</b> — URL ngắn, ít tầng, tái dùng luôn pattern
+  phân trang của trang thể loại.</p>
+<pre><code>/kiem-khieu-linh-tieu/2/    → 200, canonical = /kiem-khieu-linh-tieu/2/   ✓
+/kiem-khieu-linh-tieu/19/   → 200, canonical = /kiem-khieu-linh-tieu/19/  ✓ (trang cuối)
+/van-co-than-de-truyen/451/ → 200, canonical = /van-co-than-de-truyen/451/ ✓
+/kiem-khieu-linh-tieu/danh-sach-chuong/2/ → 404  (URL đề xuất cũ, không dùng)</code></pre>
+
+  <h4>Đã đạt</h4>
+  <ul>
+   <li><span class="good">✓</span> Link "Trang trước / Trang sau" là thẻ
+       <code>&lt;a class="pagination__link" href="..."&gt;</code> thật, không phải JS</li>
+   <li><span class="good">✓</span> Mỗi trang canonical về chính nó, <b>không</b> canonical về trang 1</li>
+   <li><span class="good">✓</span> Trang 1 dùng URL gốc <code>/kiem-khieu-linh-tieu/</code>
+       (đúng chuẩn, không tạo <code>/1/</code> trùng lặp)</li>
+  </ul>
+
+  <div class="callout warn"><b>Còn một việc:</b> các trang <code>/[slug]/[trang]/</code>
+  <b>chưa có trong sitemap nào</b>. Đếm trong <code>sitemap_story_0.xml.gz</code> và
+  <code>sitemap_misc.xml.gz</code>: <b>0 URL</b> dạng <code>/slug/số/</code>.
+  Googlebot chỉ tìm được chúng bằng cách bò từ trang truyện. Với 451 trang/truyện lớn,
+  đưa vào sitemap sẽ nhanh hơn nhiều — nên gộp vào việc sửa <b>p0-3a</b>.</div>
+
+  <div class="callout warn"><b>Vẫn còn nhân bản URL:</b>
+  <code>/kiem-khieu-linh-tieu/?page=2</code>, <code>?trang=2</code>, <code>?p=2</code>
+  đều trả <b>200</b> với nội dung y hệt trang 1. Ba tham số rác này chưa bị 301 —
+  liên quan tới <b>p1-2c</b>, ở đó <code>/all/?page=2</code> đã 301 đúng nhưng
+  trang truyện thì chưa.</div>
+
+  <h4>Ghi chú số trang</h4>
+  <p>Vì mỗi trang chỉ 20 chương (xem <b>p0-2a</b>), truyện 9008 chương cần
+  <b>451 trang</b> danh sách, không phải 91 trang như tính toán ban đầu ở mức 100 chương/trang.</p>`},
+
+ {id:"p0-2c", t:'Thêm rel="prev" / rel="next" vào head trang chương', w:"ĐÃ XONG — cả 2 thẻ đã có trong head trang chương (đo 27/08/2026)",
+  e:"2h", b:`
+  <div class="callout good"><b>Đã hoàn thành.</b> Đo lại
+  <code>/kiem-khieu-linh-tieu/chuong-2/</code> ngày 27/08/2026:</div>
+<pre><code>&lt;link rel="prev" href="https://webnovel.vn/kiem-khieu-linh-tieu/chuong-1/"&gt;   ✓
+&lt;link rel="next" href="https://webnovel.vn/kiem-khieu-linh-tieu/chuong-3/"&gt;   ✓</code></pre>
+  <p>Googlebot giờ đi được cả hai chiều trong chuỗi chương thay vì chỉ tiến một bước.</p>
+
+  <h4>Số đo cũ trước khi sửa (để đối chiếu)</h4>
+<pre><code>Số link chương trong HTML: 2  (chỉ chương 1 và chương 2)
+Thẻ rel="prev" / rel="next": KHÔNG CÓ</code></pre>
+  <h4>Verify</h4>
+<pre><code>curl -s https://webnovel.vn/kiem-khieu-linh-tieu/chuong-2/ \\
+  | grep -oE '&lt;link rel="(prev|next)"[^&gt;]*&gt;'
+# Kỳ vọng: 2 dòng — Đã pass ✓</code></pre>`},
+
+ {id:"p0-2d", t:"Thêm breadcrumb HTML hiển thị trên trang chương", w:"ĐÃ XONG — breadcrumb thật đã có trên trang chương (26/08/2026)",
+  e:"1h", b:`
+  <div class="callout good"><b>Đã hoàn thành.</b> Trang chương giờ có breadcrumb HTML thật,
+  không chỉ nằm trong JSON-LD.</div>
+<pre><code>&lt;nav aria-label="Breadcrumb"&gt;
+  &lt;a href="/"&gt;Trang chủ&lt;/a&gt; ›
+  &lt;a href="/kiem-khieu-linh-tieu/"&gt;Kiếm Khiếu Linh Tiêu&lt;/a&gt; ›
+  &lt;span&gt;Chương 1&lt;/span&gt;
+&lt;/nav&gt;</code></pre>
+  <p>Vừa tốt cho SEO (thêm internal link từ hàng chục nghìn trang chương về trang truyện),
+  vừa tốt cho người đọc.</p>`},
+
+ {id:"p0-2e", t:'Thêm "nhảy chương" trên trang chương', w:"MỘT PHẦN — đã có link về danh sách chương, chưa có nhảy 10/50/100 (đo 27/08/2026)",
+  e:"3h", b:`
+  <div class="callout good"><b>Phần đã làm được.</b> Trang chương giờ có link về
+  <b>trang truyện / danh sách chương</b> (qua breadcrumb) — trước đây không có.
+  Cộng với <code>rel="prev"/"next"</code> ở <b>p0-2c</b>, chương không còn orphan.</div>
+
+  <div class="callout warn"><b>Phần chưa làm.</b> Đo trên
+  <code>/kiem-khieu-linh-tieu/chuong-250/</code> ngày 27/08/2026 — chỉ có <b>3 link chương</b>:
+  249, 250 (chính nó), 251. Không có link nhảy 10 / 50 / 100 chương, và không có link tới
+  <b>trang danh sách chứa chương này</b> (chương 250 ở mức 20 chương/trang thì thuộc trang 13,
+  nhưng breadcrumb chỉ trỏ về trang 1).</div>
+
+<pre><code># Link nội bộ trên /kiem-khieu-linh-tieu/chuong-250/  (39 link unique)
+/kiem-khieu-linh-tieu/            ← trang truyện (= danh sách chương trang 1)  ✓
+/kiem-khieu-linh-tieu/chuong-249/ ← prev  ✓
+/kiem-khieu-linh-tieu/chuong-251/ ← next  ✓
++ 15 link thể loại ở footer, + trang chính sách
+# Link nhảy 10/50/100 chương:  0   ✗
+# Link tới /kiem-khieu-linh-tieu/13/ (trang ds chứa chương 250):  0   ✗
+# Kiểm cả chuong-1, 5, 10, 25 → đều chỉ prev/self/next</code></pre>
+
+  <h4>Việc còn lại</h4>
+  <p>Thêm link tới chương 10 / 50 / 100 gần đó và link về <b>đúng trang danh sách chứa chương
+  hiện tại</b>. Ví dụ ở chương 250 thì có link tới 240, 200, 150, 300, 350 và về
+  <code>/kiem-khieu-linh-tieu/13/</code>.</p>
+  <p>Việc này biến cấu trúc tuyến tính (9008 bước) thành cấu trúc dạng lưới (vài chục bước).
+  Một link duy nhất về đúng trang danh sách đã cắt độ sâu crawl xuống rất nhiều —
+  đây là phần rẻ nhất, nên làm trước.</p>`},
+
+ {id:"p0-3a", t:"Viết lại logic sinh sitemap: chia theo 50.000 URL/file", w:"13/24 sitemap chương đang rỗng hoàn toàn",
+  e:"1 ngày", b:`
+  <h4>Số đo thật — tải trực tiếp từng file trong /sitemap/chapters/</h4>
+  <table><tr><th>File</th><th>Số URL</th></tr>
+  <tr><td>sitemap_chapter_1</td><td>231</td></tr>
+  <tr><td>sitemap_chapter_2</td><td>250</td></tr>
+  <tr><td>sitemap_chapter_3</td><td>34</td></tr>
+  <tr><td>sitemap_chapter_4</td><td>51</td></tr>
+  <tr><td>sitemap_chapter_5, 6</td><td class="bad">0</td></tr>
+  <tr><td>sitemap_chapter_7</td><td>142</td></tr>
+  <tr><td>sitemap_chapter_8</td><td class="bad">0</td></tr>
+  <tr><td>sitemap_chapter_9</td><td>23</td></tr>
+  <tr><td>sitemap_chapter_10</td><td>53</td></tr>
+  <tr><td>sitemap_chapter_11</td><td class="bad">1</td></tr>
+  <tr><td>sitemap_chapter_12</td><td>20</td></tr>
+  <tr><td>sitemap_chapter_13, 14</td><td class="bad">0</td></tr>
+  <tr><td>sitemap_chapter_15</td><td>75</td></tr>
+  <tr><td>sitemap_chapter_16 → 18</td><td class="bad">0</td></tr>
+  <tr><td>sitemap_chapter_19</td><td class="bad">1</td></tr>
+  <tr><td>sitemap_chapter_20 → 24</td><td class="bad">0</td></tr>
+  <tr><td><b>TỔNG</b></td><td><b>881</b></td></tr></table>
+
+  <p>Đã giải nén trực tiếp các file rỗng để xác nhận không phải lỗi công cụ — nội dung thật sự là:</p>
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"/&gt;</code></pre>
+  <p>Rỗng thật, chỉ có thẻ mở đóng. Trong khi <b>một truyện đã có 9008 chương</b> mà toàn bộ
+  sitemap chỉ submit được 881 URL.</p>
+
+  <div class="callout warn"><b>Nguyên nhân khả dĩ:</b> script sinh sitemap chia theo ID truyện
+  chứ không theo số lượng URL thực tế, nên truyện đã xoá/ẩn để lại file rỗng.
+  File số 11 và 19 chỉ có đúng 1 URL cũng là dấu hiệu của lỗi phân mảnh này.</div>
+
+  <h4>Cách sửa</h4>
+  <ul>
+   <li>Gom toàn bộ URL rồi chia đều <b>50.000 URL/file</b> (giới hạn chuẩn của sitemap)</li>
+   <li>Không chia theo ID truyện</li>
+   <li>Xoá các file rỗng khỏi sitemap index</li>
+  </ul>`},
+
+ {id:"p0-3b", t:"Lọc sitemap: chỉ submit chương index,follow", w:'Đang submit cả chương noindex → GSC báo "Submitted URL marked noindex"',
+  e:"3h", b:`
+  <h4>Số đo thật — meta robots trên từng chương của kiem-khieu-linh-tieu</h4>
+  <table><tr><th>Chương</th><th>Meta robots</th></tr>
+  <tr><td>chuong-1, 2, 3, 5, 10</td><td class="good">index,follow</td></tr>
+  <tr><td>chuong-30</td><td class="bad">noindex,nofollow</td></tr>
+  <tr><td>chuong-50</td><td class="bad">noindex,nofollow</td></tr>
+  <tr><td>chuong-380 trở đi</td><td class="bad">302 redirect</td></tr></table>
+
+  <p>Nhưng trong <code>sitemap_chapter_1.xml.gz</code>, truyện này submit
+  <b>chuong-1 đến chuong-50</b> — tức submit cả chương đang <code>noindex</code>.</p>
+
+  <p>Đây là tín hiệu mâu thuẫn gửi tới Google: "hãy index trang này" (sitemap) +
+  "đừng index trang này" (meta robots). Google Search Console sẽ báo lỗi
+  <i>"Submitted URL marked noindex"</i> và làm giảm độ tin cậy của <b>toàn bộ</b> sitemap.</p>
+
+  <p><b>Cách sửa:</b> xác định ngưỡng chương miễn phí trong database rồi cắt sitemap đúng ngưỡng đó.
+  Sitemap chỉ chứa chương <code>index,follow</code>.</p>`},
+
+ {id:"p0-3c", t:"Dọn 4 URL truyện lỗi trong sitemap", w:"ĐÃ XONG — sitemap chỉ còn URL trả 200 (26/08/2026)",
+  e:"30 phút", b:`
+  <div class="callout good"><b>Đã hoàn thành.</b> 2 URL 301 đã thay bằng URL đích,
+  2 URL 302 (truyện đã gỡ) đã xoá khỏi sitemap.</div>
+  <p>Sweep toàn bộ 231 URL truyện: 227 trả 200 (tốt), còn lại:</p>
+<pre><code>301  /van-co-than-de/            → /van-co-than-de-truyen/
+301  /ta-co-mot-than-bi-dong-ky/ → /ta-co-mot-than-bi-dong-ky-truyen/
+302  /hung-bien-cuon-hut-qua-don-gian/                 → /  (truyện đã gỡ)
+302  /xuyen-thanh-thanh-nien-tri-thuc-ve-que-.../      → /  (truyện đã gỡ)</code></pre>
+  <p><b>Cách sửa:</b> sitemap chỉ được chứa URL trả 200.
+  Thay 2 URL 301 bằng URL đích, xoá hẳn 2 URL 302.</p>`},
+
+ {id:"p0-3d", t:"Thêm 301 từ /sitemap.xml sang /sitemap/sitemap.xml", w:"ĐÃ XONG — root sitemap.xml đã 301 đúng đích (26/08/2026)",
+  e:"15 phút", b:`
+  <div class="callout good"><b>Đã hoàn thành.</b> <code>/sitemap.xml</code> ở root
+  giờ trả 301 về <code>/sitemap/sitemap.xml</code>.</div>
+  <p>Sitemap thật nằm ở <code>/sitemap/sitemap.xml</code>.
+  <code>robots.txt</code> khai báo đúng, nhưng nhiều công cụ (và một số bot)
+  mặc định dò <code>/sitemap.xml</code> ở root.</p>
+<pre><code>curl -s -o /dev/null -w "%{http_code}\\n" https://webnovel.vn/sitemap.xml
+# Hiện tại: 404 — Kỳ vọng: 301 -> /sitemap/sitemap.xml</code></pre>`},
+
+ {id:"p0-3e", t:"Đặt cron sinh lại sitemap hằng ngày", w:"Sitemap tĩnh sẽ lỗi thời ngay khi có truyện mới",
+  e:"30 phút", b:`
+<pre><code># crontab -e
+15 3 * * * /usr/bin/php /path/to/webroot/bin/generate-sitemap.php >> /var/log/sitemap.log 2>&1</code></pre>
+  <p>Sau khi sinh xong, ping Google (tuỳ chọn, Google đã bỏ endpoint ping nhưng
+  GSC vẫn tự đọc lại theo <code>lastmod</code>). Quan trọng hơn là set
+  <code>&lt;lastmod&gt;</code> chính xác trong sitemap index.</p>`},
+ ]
+},
+
+{
+ id:"P1", tag:"t-p1", title:"P1 — Lỗi lớn",
+ note:"Tuần 1–2. Nhóm này gây trùng lặp nội dung, mất tín hiệu chia sẻ và làm blog tự cạnh tranh nhau.",
+ items:[
+
+ {id:"p1-1a", t:"Thêm Organization + WebSite + SearchAction schema vào homepage", w:"ĐÃ XONG — schema đã lên homepage, verify live 24/08/2026",
+  e:"3h", b:`
+  <div class="callout good"><b>Đã hoàn thành.</b> Đo lại HTML homepage ngày 24/08/2026:
+  có <b>1 khối JSON-LD</b> dạng <code>@graph</code> chứa đầy đủ
+  <code>Organization</code> (kèm <code>logo</code>, <code>parentOrganization</code>,
+  <code>address</code>, <code>sameAs</code>) và <code>WebSite</code> kèm
+  <code>SearchAction</code> trỏ tới <code>/tim-kiem/?tukhoa={search_term_string}</code>.</div>
+
+  <div class="callout warn"><b>Còn thiếu Open Graph.</b> Homepage vẫn <b>0 thẻ og:</b> và
+  <b>0 thẻ Twitter Card</b> — grep <code>og:</code> trên HTML trả về 0 kết quả.
+  Phần này thuộc hạng mục <b>p1-1b</b>, chưa xong.</div>
+
+  <h4>Hiện trạng homepage (24/08/2026)</h4>
+<pre><code>Số khối JSON-LD:     1   ✓
+Organization schema: có  ✓
+sameAs:              có  ✓  (App Store, Facebook, YouTube)
+WebSite + SearchAction: có ✓
+Số thẻ Open Graph:   0   ✗  → xem p1-1b
+Số thẻ Twitter Card: 0   ✗  → xem p1-1b</code></pre>
+
+  <h4>Khối schema đang chạy trên homepage</h4>
+<pre><code>&lt;script type="application/ld+json"&gt;
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://webnovel.vn/#organization",
+      "name": "Webnovel.vn",
+      "alternateName": "Webnovel Việt Nam",
+      "url": "https://webnovel.vn/",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://cdn.webnovel.vn/assets/images/webnovel.svg",
+        "width": 125,
+        "height": 36
+      },
+      "description": "Nền tảng đọc truyện chữ và sách online có bản quyền tại Việt Nam.",
+      "foundingDate": "2025",
+      "parentOrganization": {
+        "@type": "Organization",
+        "name": "Công ty Cổ phần TOP TALENT"
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Tầng 1, số 68 đường số 11, Khu dân cư Cityland Park Hills",
+        "addressLocality": "Phường Gò Vấp",
+        "addressRegion": "Thành phố Hồ Chí Minh",
+        "addressCountry": "VN"
+      },
+      "sameAs": [
+        "https://play.google.com/store/apps/details?id=com.webnovel",
+        "https://apps.apple.com/us/app/webnovel-vn-truyện-sách/id6747803327",
+        "https://www.facebook.com/CHÈN_FANPAGE",
+        "https://www.youtube.com/@CHÈN_KÊNH",
+        "https://www.tiktok.com/@CHÈN_TIKTOK"
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://webnovel.vn/#website",
+      "url": "https://webnovel.vn/",
+      "name": "Webnovel.vn",
+      "inLanguage": "vi-VN",
+      "publisher": { "@id": "https://webnovel.vn/#organization" },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://webnovel.vn/tim-kiem?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+  ]
+}
+&lt;/script&gt;</code></pre>
+  <div class="callout">Khối <code>SearchAction</code> cho phép Google hiển thị
+  <b>ô tìm kiếm ngay trong kết quả tìm kiếm</b> (sitelinks searchbox) —
+  rất giá trị cho site nội dung lớn.</div>`},
+
+ {id:"p1-1b", t:"Thêm Open Graph + Twitter Card cho mọi loại trang", w:"Share link lên Facebook/Zalo hiện không hiện ảnh và mô tả",
+  e:"4h", b:`
+  <h4>Hiện trạng OG theo từng loại trang</h4>
+  <table><tr><th>Trang</th><th>OG tags</th><th>Twitter Card</th></tr>
+  <tr><td>Homepage</td><td class="bad">0</td><td class="bad">0</td></tr>
+  <tr><td>Thể loại</td><td class="bad">0</td><td class="bad">0</td></tr>
+  <tr><td>Truyện</td><td>5</td><td class="bad">0</td></tr>
+  <tr><td>Blog</td><td>3</td><td class="bad">0</td></tr>
+  <tr><td>Chương</td><td class="bad">1</td><td class="bad">0</td></tr></table>
+
+<pre><code>&lt;meta property="og:site_name" content="Webnovel.vn"&gt;
+&lt;meta property="og:locale" content="vi_VN"&gt;
+&lt;meta property="og:type" content="website"&gt;
+&lt;meta property="og:title" content="..."&gt;
+&lt;meta property="og:description" content="..."&gt;
+&lt;meta property="og:url" content="..."&gt;
+&lt;meta property="og:image" content="..."&gt;
+&lt;meta property="og:image:width" content="1200"&gt;
+&lt;meta property="og:image:height" content="630"&gt;
+&lt;meta name="twitter:card" content="summary_large_image"&gt;
+&lt;meta name="twitter:title" content="..."&gt;
+&lt;meta name="twitter:description" content="..."&gt;
+&lt;meta name="twitter:image" content="..."&gt;</code></pre>
+  <p>Với trang truyện, <code>og:type</code> nên là <code>book</code>;
+  với bài blog là <code>article</code>.</p>`},
+
+ {id:"p1-2a", t:"301 www.webnovel.vn sang non-www", w:"www đang trả 200 với nội dung đầy đủ — toàn bộ site bị nhân đôi",
+  e:"15 phút", b:`
+<pre><code>curl -sI https://www.webnovel.vn/ | head -1
+# HTTP/2 200        ← KHÔNG redirect (đã verify lại hôm nay)</code></pre>
+  <p>Điểm may mắn là canonical trên đó vẫn trỏ đúng về <code>https://webnovel.vn/</code>,
+  nên thiệt hại được giảm nhẹ. Nhưng đây vẫn là toàn bộ site bị nhân đôi,
+  gây lãng phí crawl budget.</p>
+  <h4>Cách sửa (Cloudflare → Rules → Redirect Rules)</h4>
+<pre><code>Nếu hostname = www.webnovel.vn
+→ 301 tới https://webnovel.vn/${'${path}'}</code></pre>`},
+
+ {id:"p1-2b", t:"301 URL chữ hoa sang chữ thường", w:"ĐÃ XỬ LÝ — nhưng bằng 404 thay vì 301 (đo 26/08/2026)",
+  e:"1h", b:`
+  <div class="callout good"><b>Trùng lặp đã hết.</b> <code>/TIEN-HIEP/</code> giờ trả
+  <b>404</b>, không còn trả 200 tự canonical vào chính nó. Nguồn tạo bản sao vô hạn đã bị bịt.</div>
+
+  <div class="callout warn"><b>Khác với đề xuất ban đầu:</b> checklist đề nghị <b>301</b> về
+  bản chữ thường, thực tế đang là <b>404</b>. Bịt trùng lặp thì được, nhưng nếu có ai link tới
+  <code>/Tien-Hiep/</code> thì link đó thành link chết — mất hết link equity, và người dùng
+  click vào cũng gặp trang lỗi. Cân nhắc đổi sang 301 khi có dịp; không gấp.</div>
+
+  <h4>Số đo cũ trước khi sửa (để đối chiếu)</h4>
+  <table><tr><th>URL</th><th>Status</th><th>Canonical</th></tr>
+  <tr><td>/tien-hiep/</td><td>200</td><td class="good">/tien-hiep/ ✓</td></tr>
+  <tr><td>/TIEN-HIEP/</td><td>200</td><td class="bad">/TIEN-HIEP/ ✗</td></tr>
+  <tr><td>/Tien-Hiep/</td><td>200</td><td class="bad">/Tien-Hiep/ ✗</td></tr>
+  <tr><td>/tien-hiep (không slash)</td><td>200</td><td class="good">/tien-hiep/ ✓</td></tr>
+  <tr><td>/tien-hiep//</td><td>200</td><td class="good">/tien-hiep/ ✓</td></tr></table>
+
+  <p>Nếu ai đó (hoặc một scraper) link tới <code>/Tien-Hiep/</code>,
+  Google sẽ index thành trang riêng biệt trùng nội dung 100%.
+  Đây là nguồn tạo bản sao <b>vô hạn</b>.</p>
+
+  <p><b>Cách sửa</b> — Nginx:</p>
+<pre><code>if ($request_uri ~ [A-Z]) {
+    return 301 https://webnovel.vn$lowercase_uri;
+}</code></pre>
+  <p>Hoặc đơn giản hơn: sửa hàm sinh canonical trong PHP để luôn <code>strtolower()</code> đường dẫn,
+  đồng thời 301 ở tầng route.</p>`},
+
+ {id:"p1-2c", t:"301 kiểu ?page=N sang kiểu /N/", w:"ĐÃ XONG cho trang danh sách — trang truyện vẫn còn ?page= trả 200 (đo 27/08/2026)",
+  e:"2h", b:`
+  <div class="callout good"><b>Đã hoàn thành trên mọi trang danh sách.</b>
+  Kiểu <code>?page=</code> giờ 301 về kiểu <code>/N/</code>, và mỗi trang <code>/N/</code>
+  canonical về chính nó.</div>
+
+  <h4>Số đo lại 27/08/2026</h4>
+<pre><code>/all/?page=2         → 301 → /all/2/          ✓
+/tien-hiep/?page=2   → 301 → /tien-hiep/2/    ✓
+/ngon-tinh/?page=3   → 301 → /ngon-tinh/3/    ✓
+/truyen-full/?page=2 → 301 → /truyen-full/2/  ✓
+/all/?page=1         → 301 → /all/            ✓ (xử lý đúng case trang 1)
+
+/all/2/       canonical → /all/2/        ✓
+/tien-hiep/2/ canonical → /tien-hiep/2/  ✓</code></pre>
+  <p>Case <code>?page=1</code> → <code>/all/</code> làm đúng: không tạo URL
+  <code>/all/1/</code> trùng lặp với trang gốc.</p>
+
+  <div class="callout warn"><p><b>Còn thủng ở trang truyện.</b> Ba tham số rác dưới đây đều trả
+  <b>200</b> với nội dung y hệt trang 1, chưa bị 301:</p>
+<pre><code>/kiem-khieu-linh-tieu/?page=2   → 200  ✗
+/kiem-khieu-linh-tieu/?trang=2  → 200  ✗
+/kiem-khieu-linh-tieu/?p=2      → 200  ✗
+# Kỳ vọng: 301 → /kiem-khieu-linh-tieu/2/</code></pre>
+  <p>Đây là nguồn trùng lặp nhân theo số truyện. Cách gọn nhất: bỏ mọi query string không nằm
+  trong whitelist ở tầng route, hoặc 301 <code>?page=N</code> → <code>/N/</code> áp dụng cho
+  cả trang truyện như đã làm với trang danh sách.</p></div>
+
+  <h4>Số đo cũ trước khi sửa (để đối chiếu)</h4>
+  <table><tr><th>URL</th><th>Canonical</th><th>Đánh giá</th></tr>
+  <tr><td>/all/2/</td><td>/all/2/</td><td class="good">Đúng</td></tr>
+  <tr><td>/all/?page=2</td><td>/all/</td><td class="bad">Sai</td></tr>
+  <tr><td>/tien-hiep/2/</td><td>/tien-hiep/2/</td><td class="good">Đúng</td></tr>
+  <tr><td>/tien-hiep/?page=2</td><td>/tien-hiep/</td><td class="bad">Sai</td></tr></table>
+  <p>Kiểu <code>?page=</code> canonical về trang 1 là <b>sai</b> — trang 2 có nội dung khác
+  trang 1, canonical về trang 1 khiến Google bỏ qua toàn bộ truyện ở trang 2 trở đi.</p>`},
+
+ {id:"p1-3a", t:"Sửa 404: trả mã 404 thật thay vì 302 về homepage", w:"ĐÃ XONG — URL không tồn tại đã trả 404 thật, verify live 24/08/2026",
+  e:"3h", b:`
+  <div class="callout good"><b>Đã hoàn thành.</b> Đo lại ngày 24/08/2026, cả hai URL trước đây
+  redirect 302 về homepage giờ đều trả <b>404</b> đúng chuẩn.</div>
+
+  <h4>Số đo hiện tại (24/08/2026)</h4>
+<pre><code>curl -sI https://webnovel.vn/trang-khong-ton-tai-xyz/ | head -1
+# HTTP/2 404   ✓
+
+curl -sI https://webnovel.vn/all/99/ | head -1
+# HTTP/2 404   ✓</code></pre>
+
+  <h4>Số đo cũ trước khi sửa (để đối chiếu)</h4>
+<pre><code># HTTP/2 302  → Location: https://webnovel.vn/
+# HTTP/2 302  → Location: https://webnovel.vn/all/</code></pre>
+  <p>Google gọi đây là <b>soft 404</b> và xử phạt vì:</p>
+  <ul>
+   <li>Không phân biệt được trang chết với trang thật</li>
+   <li>Homepage nhận vô số redirect từ URL rác → loãng tín hiệu</li>
+   <li>Lãng phí crawl budget</li>
+  </ul>
+
+  <div class="callout warn"><b>Lưu ý còn lại:</b> <code>llms.txt</code> đang khai báo với AI rằng
+  site "trả về HTTP 200 cho cả đường dẫn không tồn tại". Câu đó giờ đã sai — nên sửa lại khi
+  làm hạng mục <b>geo-1</b>, nếu không AI sẽ tiếp tục ngờ vực mọi URL của site.</div>`},
+
+ {id:"p1-3b", t:"Thiết kế trang 404 thân thiện", w:"Giữ người dùng lại thay vì để họ thoát",
+  e:"3h", b:`
+  <p>Trang 404 nên có:</p>
+  <ul>
+   <li>Ô tìm kiếm đặt nổi bật</li>
+   <li>Link tới các thể loại chính (tiên hiệp, ngôn tình, điền văn...)</li>
+   <li>5–10 truyện hot hiện tại</li>
+   <li>Link về trang chủ và trang "Truyện mới cập nhật"</li>
+   <li>Thẻ <code>&lt;meta name="robots" content="noindex"&gt;</code></li>
+  </ul>`},
+
+ {id:"p1-4a", t:"Sửa title trang chương: thêm tên chương", w:"ĐÃ XONG — title trang chương đã có tên chương (26/08/2026)",
+  e:"1h", b:`
+  <div class="callout good"><b>Đã hoàn thành.</b> Title trang chương giờ chứa tên chương —
+  mở ra hàng chục nghìn cơ hội từ khoá dài.</div>
+  <p>Đo trên <code>/kiem-khieu-linh-tieu/chuong-1/</code>:</p>
+<pre><code>Title: "Kiếm Khiếu Linh Tiêu - chương 1"   (31 ký tự)</code></pre>
+  <p><b>Sửa thành:</b></p>
+<pre><code>Chương 1: Phong Tuyết Cừu Sát - Kiếm Khiếu Linh Tiêu | Webnovel.vn</code></pre>
+  <p>Tên chương là phần chứa từ khoá dài (long-tail) mà người đọc thực sự tìm.
+  Với hàng chục nghìn trang chương, đây là hàng chục nghìn cơ hội đang bỏ phí.</p>`},
+
+ {id:"p1-4b", t:"Sửa description trang chương: lấy 150 ký tự đầu nội dung", w:"ĐÃ XONG — description giờ lấy từ nội dung chương, 150–190 ký tự (đo 27/08/2026)",
+  e:"1h", b:`
+  <div class="callout good"><b>Đã hoàn thành.</b> Description trang chương không còn lặp title,
+  đã lấy đoạn mở đầu nội dung thật. Hàng chục nghìn meta description giờ khác nhau.</div>
+
+  <h4>Số đo lại 27/08/2026</h4>
+<pre><code>/kiem-khieu-linh-tieu/chuong-1/
+"Tôn Yến Vãn nghe ngóng tiếng gió tuyết ngoài cửa, khom vai tiến gần đến
+ bếp lò một chút. Hắn đã xuyên không tới đây được năm ngày và vẫn chưa hiểu rõ"
+→ 151 ký tự  ✓  (chuẩn 120–160)
+
+/kiem-khieu-linh-tieu/chuong-250/
+"Mấy ngày sau, Tôn Yến Vãn cuối cùng cũng cáo từ, Hồng Liên hội từ đại long
+ đầu trở xuống, các vị đương gia đều đích thân tiễn ra ngoài mười dặm,"
+→ 190 ký tự  (hơi dài, Google sẽ cắt ở ~160 — không phải lỗi)</code></pre>
+
+  <div class="callout"><b>Điểm nhỏ có thể tinh chỉnh:</b> đang cắt theo ranh giới từ nên độ dài
+  dao động 150–190 ký tự. Google cắt hiển thị ở khoảng 155–160 ký tự, phần dư chỉ bị ẩn chứ
+  không bị phạt. Nếu muốn gọn thì cắt ở 155 rồi lùi về dấu cách gần nhất và thêm
+  <code>…</code>. Không cần gấp.</div>
+
+  <h4>Số đo cũ trước khi sửa (để đối chiếu)</h4>
+<pre><code>Description: "Sách Kiếm Khiếu Linh Tiêu - chương 1"   (36 ký tự — quá ngắn, lặp title)</code></pre>
+<pre><code>$desc = mb_substr(strip_tags($chapter_content), 0, 150) . '...';</code></pre>`},
+
+ {id:"p1-4c", t:'Sửa lỗi lặp "Chương 1: Chương 1:" trong schema', w:"CHƯA HẾT — title/WebPage đã sạch, node BookChapter vẫn còn lặp (đo 26/08/2026)",
+  e:"30 phút", b:`
+  <div class="callout warn"><b>Sửa chưa hết.</b> Đo lại <code>/kiem-khieu-linh-tieu/chuong-1/</code>
+  ngày 26/08/2026: <code>&lt;title&gt;</code> và node <code>WebPage.name</code> đã sạch,
+  nhưng node <code>BookChapter.name</code> trong <code>@graph</code> <b>vẫn còn lặp</b>:</div>
+<pre><code>WebPage.name:     "Chương 1: Phong Tuyết Cừu Sát – Kiếm Khiếu Linh Tiêu"  ✓
+BookChapter.name: "Chương 1: Chương 1: Phong Tuyết Cừu Sát"               ✗</code></pre>
+  <p>Nghĩa là có <b>hai chỗ sinh tên chương</b> trong code — chỗ sinh title đã sửa,
+  chỗ sinh <code>BookChapter</code> thì chưa. Tìm nơi build node BookChapter và áp cùng
+  <code>preg_replace</code>:</p>
+<pre><code>"name": "Chương 1: Chương 1: Phong Tuyết Cừu Sát"</code></pre>
+<pre><code>$chapter_name = preg_replace('/^Chương\\s+\\d+\\s*:\\s*/iu', '', $raw_name);
+$full_name = "Chương {$number}: {$chapter_name}";</code></pre>
+  <p>Kiểm tra luôn xem lỗi này có xuất hiện ở title và H1 không.</p>`},
+
+ {id:"p1-5a", t:"Kiểm kê 104 bài blog, xác định nhóm cannibalization", w:"17 bài cùng nhắm một từ khoá — không bài nào lên top được",
+  e:"1 ngày", b:`
+  <h4>Phân tích 104 slug blog</h4>
+  <table><tr><th>Mẫu slug</th><th>Số bài</th></tr>
+  <tr><td>Bắt đầu bằng <code>top-</code></td><td class="bad">67 / 104 (64%)</td></tr>
+  <tr><td>Chứa <code>top-truyen-tien-hiep</code></td><td class="bad">17</td></tr>
+  <tr><td>Chứa <code>hay-nhat-hien-nay</code></td><td>9</td></tr>
+  <tr><td>Chứa <code>tu-tien-hay-nhat-hien-nay</code></td><td>6</td></tr>
+  <tr><td>Chứa <code>tien-hiep-hay-nhat-hien-nay</code></td><td>3</td></tr></table>
+
+  <p>Ví dụ các tiêu đề gần như trùng nhau:</p>
+  <ul>
+   <li>"Top truyện tiên hiệp hay nhất hiện nay: 5 truyện tu tiên mới hay đáng đọc"</li>
+   <li>"Top truyện tiên hiệp hay nhất hiện nay: 4 main không hack vẫn lên đỉnh"</li>
+   <li>"Top truyện tiên hiệp hay nhất hiện nay: khi tu vi cao chưa chắc là tự do"</li>
+   <li>"Top truyện tiên hiệp 2026: 4 bộ cực cuốn cho fan đọc truyện tiên hiệp"</li>
+   <li>"Top truyện tiên hiệp đáng đọc nhất: 4 main dị biệt của truyện tiên hiệp huyền huyễn"</li>
+  </ul>
+  <p><b>Việc cần làm:</b> lập bảng Excel gồm slug, tiêu đề, từ khoá nhắm tới, traffic hiện tại
+  (lấy từ GSC), rồi nhóm các bài trùng từ khoá lại với nhau.</p>`},
+
+ {id:"p1-5b", t:'Chọn pillar cho "top truyện tiên hiệp", viết lại 3000+ chữ', w:"Một từ khoá — một bài",
+  e:"2 ngày", b:`
+  <ul>
+   <li>Chọn bài có traffic/backlink tốt nhất làm pillar</li>
+   <li>Viết lại thật dày: 3000+ chữ, 20–30 truyện, mỗi truyện có mô tả riêng</li>
+   <li>Đặt ở URL sạch: <code>/blog/top-truyen-tien-hiep-hay-nhat/</code></li>
+   <li>Cập nhật định kỳ (thêm truyện mới, ghi rõ ngày cập nhật cuối)</li>
+   <li>Thêm mục lục có anchor link ở đầu bài</li>
+   <li>Thêm bảng so sánh (số chương, tình trạng, đánh giá) — AI rất thích trích bảng</li>
+  </ul>`},
+
+ {id:"p1-5c", t:"Đổi hướng 16 bài còn lại sang từ khoá dài không chồng lấn", w:"Biến đối thủ nội bộ thành cluster hỗ trợ",
+  e:"3 ngày", b:`
+  <p>Ví dụ các từ khoá cluster không chồng lấn:</p>
+  <ul>
+   <li>"truyện tiên hiệp main phản diện"</li>
+   <li>"truyện tu tiên gia tộc"</li>
+   <li>"truyện tiên hiệp có hệ thống"</li>
+   <li>"truyện tiên hiệp hài hước"</li>
+   <li>"truyện tiên hiệp nữ chính mạnh"</li>
+   <li>"truyện tiên hiệp đã hoàn thành"</li>
+   <li>"truyện tiên hiệp cho người mới đọc"</li>
+  </ul>
+  <p>Mỗi bài sửa lại title, H1, meta description, và phần mở đầu để nhắm đúng một từ khoá duy nhất.</p>`},
+
+ {id:"p1-5d", t:"301 các bài trùng lặp về pillar", w:"Giữ lại link equity thay vì xoá thẳng",
+  e:"2h", b:`
+  <p>Với những bài trùng nhau quá nhiều mà không tách được từ khoá riêng:
+  <b>301 về pillar</b>, đừng xoá thẳng (xoá là mất hết link equity và gây 404).</p>
+  <p>Trước khi 301, copy những đoạn nội dung hay trong bài cũ sang bổ sung cho pillar.</p>`},
+
+ {id:"p1-5e", t:"Thiết lập liên kết hai chiều pillar ↔ cluster", w:"Đây là thứ làm mô hình pillar-cluster hoạt động",
+  e:"1 ngày", b:`
+  <ul>
+   <li>Mỗi cluster link về pillar bằng anchor chính xác ("top truyện tiên hiệp hay nhất")</li>
+   <li>Pillar link xuống <b>tất cả</b> cluster</li>
+   <li>Cluster liên quan link chéo nhau</li>
+   <li>Mỗi lần nhắc tên truyện trong bài, link tới trang truyện đó</li>
+  </ul>
+  <div class="callout"><b>Quy tắc từ nay:</b> trước khi viết bài mới, tra xem đã có bài nào
+  nhắm từ khoá đó chưa. Một từ khoá — một bài.</div>`},
+ ]
+},
+
+{
+ id:"P2", tag:"t-p2", title:"P2 — Tối ưu quan trọng",
+ note:"Tuần 3–4. Nhóm này nâng chất lượng trang thể loại, tốc độ và structured data.",
+ items:[
+
+ {id:"p2-1", t:"Định nghĩa đầy đủ ItemList trong JSON-LD trang thể loại", w:"Đang tham chiếu tới #list nhưng không có object nào định nghĩa nó",
+  e:"3h", b:`
+  <p>Trên trang thể loại, JSON-LD khai báo:</p>
+<pre><code>"mainEntity": {
+  "@type": "ItemList",
+  "@id": "https://webnovel.vn/tien-hiep/#list"
+}</code></pre>
+  <p>Nhưng <b>không có object nào định nghĩa <code>#list</code></b> trong toàn bộ JSON-LD.
+  Đây là tham chiếu treo (dangling reference) — trỏ tới thứ không tồn tại.</p>
+  <p>Site có dùng microdata (<code>itemprop="itemListElement"</code>, 401 lần xuất hiện)
+  trên các thẻ <code>&lt;article&gt;</code>, nhưng trộn microdata với JSON-LD thế này
+  khiến Google khó ghép nối.</p>
+
+<pre><code>{
+  "@type": "ItemList",
+  "@id": "https://webnovel.vn/tien-hiep/#list",
+  "numberOfItems": 51,
+  "itemListOrder": "https://schema.org/ItemListOrderDescending",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "item": {
+        "@type": "Book",
+        "name": "Tên truyện",
+        "url": "https://webnovel.vn/slug-truyen/",
+        "image": "https://cdn.webnovel.vn/img/...",
+        "author": { "@type": "Person", "name": "..." },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.5",
+          "ratingCount": "252"
+        }
+      }
+    }
+  ]
+}</code></pre>`},
+
+ {id:"p2-2", t:"Đổi H2 tên truyện thành H3 trên trang danh sách", w:"Trang /tien-hiep/ có 51 thẻ H2 — loãng hoàn toàn cấu trúc heading",
+  e:"1h", b:`
+  <p>H2 là tiêu đề mục con của trang, không phải nhãn cho từng item trong danh sách.
+  51 H2 khiến Google (và trình đọc màn hình) không hiểu được đâu là nội dung chính.</p>
+<pre><code>&lt;h1&gt;Truyện Tiên Hiệp&lt;/h1&gt;
+
+&lt;h2&gt;Giới thiệu thể loại tiên hiệp&lt;/h2&gt;
+&lt;p&gt;[200-300 chữ giải thích thể loại...]&lt;/p&gt;
+
+&lt;h2&gt;Danh sách truyện tiên hiệp hay nhất&lt;/h2&gt;
+&lt;article&gt;
+  &lt;h3&gt;&lt;a href="..."&gt;Tên truyện&lt;/a&gt;&lt;/h3&gt;   &lt;!-- H3 thay vì H2 --&gt;
+&lt;/article&gt;</code></pre>
+  <p>Hoặc dùng <code>&lt;div class="card-title"&gt;</code> nếu không muốn tăng số heading.</p>`},
+
+ {id:"p2-3", t:"Viết 300–500 chữ giới thiệu cho 10 thể loại chính", w:"Trang /tien-hiep/ có 4.286 từ nhưng gần như toàn bộ là tóm tắt truyện lặp từ trang khác",
+  e:"1 tuần", b:`
+  <p>Không có đoạn văn nào giới thiệu về thể loại tiên hiệp.
+  Đây là điểm khác biệt lớn nhất giữa trang thể loại xếp top và trang thể loại chỉ là danh mục.</p>
+
+  <h4>Cấu trúc gợi ý cho mỗi trang thể loại</h4>
+  <ol>
+   <li>Thể loại này là gì (2–3 câu định nghĩa rõ ràng, trả lời thẳng ngay câu đầu)</li>
+   <li>Đặc điểm nhận diện (mô-típ, thế giới quan, kiểu nhân vật chính)</li>
+   <li>Phân biệt với thể loại gần giống — tiên hiệp khác huyền huyễn thế nào?</li>
+   <li>Ai nên đọc thể loại này</li>
+   <li>3–5 tác phẩm tiêu biểu, có link nội bộ</li>
+  </ol>
+  <p>Có 30 trang thể loại/danh mục trong sitemap — làm dần, ưu tiên 10 thể loại có traffic cao nhất
+  (xem trong GSC → Performance → Pages).</p>`},
+
+ {id:"p2-4a", t:"Thêm FAQ schema + FAQ hiển thị trên trang truyện", w:"Toàn site hiện có 0 FAQ schema — cơ hội bị bỏ lỡ hoàn toàn",
+  e:"1 ngày", b:`
+  <p>Kiểm tra toàn bộ 5 loại trang: <code>FAQPage: 0</code>, <code>Question: 0</code>,
+  <code>Review: 0</code>, <code>speakable: 0</code>.</p>
+  <p>FAQ schema giúp chiếm nhiều diện tích hơn trên trang kết quả Google,
+  và <b>là nguồn ưa thích của AI khi trả lời câu hỏi</b> (rất quan trọng cho GEO).</p>
+
+  <p>4–6 câu hỏi tự động sinh từ dữ liệu có sẵn:</p>
+<pre><code>{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Truyện Vạn Cổ Thần Đế có bao nhiêu chương?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Vạn Cổ Thần Đế hiện có 9008 chương, cập nhật liên tục trên Webnovel.vn."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Vạn Cổ Thần Đế đã hoàn thành chưa?",
+      "acceptedAnswer": { "@type": "Answer", "text": "..." }
+    },
+    {
+      "@type": "Question",
+      "name": "Đọc Vạn Cổ Thần Đế miễn phí được không?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Bạn có thể đọc miễn phí các chương đầu. Từ chương 30 trở đi cần tài khoản hội viên."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Tác giả Vạn Cổ Thần Đế là ai?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Tác giả Phi Thiên Ngư..." }
+    }
+  ]
+}</code></pre>
+  <div class="callout warn"><b>Quan trọng:</b> FAQ phải hiển thị thật trên trang,
+  không chỉ nằm trong schema. Google phạt schema không khớp nội dung hiển thị.</div>`},
+
+ {id:"p2-4b", t:"Thêm FAQ schema + FAQ hiển thị trên trang thể loại", w:"Nhắm thẳng câu hỏi người dùng gõ vào Google và AI",
+  e:"1 ngày", b:`
+  <p>Câu hỏi gợi ý cho mỗi trang thể loại:</p>
+  <ul>
+   <li>"Truyện tiên hiệp là gì?"</li>
+   <li>"Tiên hiệp khác huyền huyễn thế nào?"</li>
+   <li>"Nên đọc truyện tiên hiệp nào trước?"</li>
+   <li>"Truyện tiên hiệp nào đã hoàn thành?"</li>
+   <li>"Đọc truyện tiên hiệp có bản quyền ở đâu?"</li>
+  </ul>`},
+
+ {id:"p2-4c", t:"Thêm FAQ vào bài blog dạng top list", w:"3–5 câu hỏi liên quan ở cuối bài",
+  e:"3 ngày", b:`
+  <p>Với 67 bài dạng top list, thêm mục FAQ ở cuối bài — vừa tăng độ dài nội dung,
+  vừa mở thêm cửa vào từ câu hỏi dài.</p>
+  <p>Lấy câu hỏi từ: mục "People also ask" trên Google, phần bình luận của bài,
+  và câu hỏi thực tế trong group Facebook về truyện.</p>`},
+
+ {id:"p2-5a", t:"Thêm defer cho 6 file JS đang chặn render", w:"Homepage tải 10 file JS, 6 file chặn render",
+  e:"2h", b:`
+<pre><code>[BLOCKING]  jquery-3.7.1.min.js
+[BLOCKING]  main.js?v=2.22
+[BLOCKING]  lazy.js?v=1.2
+[BLOCKING]  popup-manager.js?v=1.53
+[BLOCKING]  tab.js?v=1.2
+[BLOCKING]  home.js?v=1.20</code></pre>
+<pre><code>&lt;script src="https://cdn.webnovel.vn/assets/js/main.js?v=2.22" defer&gt;&lt;/script&gt;</code></pre>
+  <p>Lưu ý thứ tự: <code>defer</code> giữ nguyên thứ tự thực thi, nên jQuery vẫn chạy trước
+  các file phụ thuộc vào nó. Nếu dùng <code>async</code> thì thứ tự không đảm bảo.</p>`},
+
+ {id:"p2-5b", t:"Tách critical CSS xuống dưới 14 KB", w:"CSS nội tuyến hiện 78 KB — quá lớn",
+  e:"1 ngày", b:`
+  <p>Chuẩn critical CSS là dưới 14 KB (vừa gói TCP đầu tiên).
+  Giữ lại phần above-the-fold nội tuyến, phần còn lại tải bất đồng bộ:</p>
+<pre><code>&lt;link rel="preload" href="/css/main.css" as="style" onload="this.rel='stylesheet'"&gt;
+&lt;noscript&gt;&lt;link rel="stylesheet" href="/css/main.css"&gt;&lt;/noscript&gt;</code></pre>
+  <p>Công cụ tách tự động: <code>critical</code> (npm) hoặc <code>penthouse</code>.</p>`},
+
+ {id:"p2-5c", t:"Cân nhắc bỏ jQuery", w:"Tiết kiệm khoảng 30 KB nếu chỉ dùng cho vài thao tác DOM",
+  e:"2–3 ngày", b:`
+  <p>Kiểm tra xem jQuery đang dùng cho gì. Nếu chỉ là
+  <code>$(selector)</code>, <code>.on()</code>, <code>.ajax()</code>
+  thì thay bằng <code>querySelector</code>, <code>addEventListener</code>, <code>fetch</code>.</p>
+  <p>Việc này ưu tiên thấp — chỉ làm khi đã xong các mục trên.</p>`},
+
+ {id:"p2-6a", t:'Thêm loading="lazy" cho ảnh dưới màn hình đầu ở homepage', w:"Homepage đang không lazy-load ảnh nào — 72/72 ảnh tải ngay",
+  e:"2h", b:`
+  <table><tr><th>Chỉ số</th><th>Homepage</th><th>Trang thể loại</th></tr>
+  <tr><td>Tổng số ảnh</td><td>72</td><td>56</td></tr>
+  <tr><td>Có <code>loading="lazy"</code></td><td class="bad">0</td><td>50</td></tr>
+  <tr><td>Thiếu <code>width</code>/<code>height</code></td><td class="bad">7</td><td>—</td></tr>
+  <tr><td>Dùng <code>srcset</code></td><td class="bad">0</td><td class="bad">0</td></tr>
+  <tr><td>Có <code>fetchpriority</code></td><td>12</td><td>—</td></tr></table>
+  <p>Giữ ảnh above-the-fold ở <code>loading="eager"</code> + <code>fetchpriority="high"</code>,
+  toàn bộ ảnh còn lại chuyển sang <code>loading="lazy"</code>.</p>`},
+
+ {id:"p2-6b", t:"Thêm width/height cho 7 ảnh còn thiếu", w:"ĐÃ XONG — 7 ảnh đã có width/height (26/08/2026)",
+  e:"1h", b:`
+  <div class="callout good"><b>Đã hoàn thành.</b> 7 ảnh thiếu <code>width</code>/<code>height</code>
+  trên homepage đã được bổ sung.</div>
+  <p>Thiếu <code>width</code>/<code>height</code> khiến trình duyệt không biết dành chỗ,
+  nội dung nhảy khi ảnh tải xong → điểm CLS xấu → ảnh hưởng xếp hạng.</p>`},
+
+ {id:"p2-6c", t:"Thêm srcset cho ảnh bìa truyện", w:"Đang phục vụ cùng một kích thước ảnh cho cả điện thoại và desktop",
+  e:"1 ngày", b:`
+<pre><code>&lt;img src="cover-300.webp"
+     srcset="cover-150.webp 150w, cover-300.webp 300w, cover-600.webp 600w"
+     sizes="(max-width: 768px) 150px, 300px"
+     width="300" height="400" loading="lazy" alt="Bìa truyện ..."&gt;</code></pre>
+  <p>Điểm tốt sẵn có: 63/72 ảnh đã dùng WebP. Chỉ cần bổ sung nhiều kích thước.</p>`},
+
+ {id:"p2-7a", t:"Sửa cache header: bỏ no-store cho trang công khai", w:"Cloudflare đang không cache gì cả — cf-cache-status: DYNAMIC",
+  e:"3h", b:`
+<pre><code>cache-control: no-store, no-cache, must-revalidate
+cf-cache-status: DYNAMIC</code></pre>
+  <h4>TTFB đo được (3 lần đo mỗi trang)</h4>
+  <table><tr><th>Trang</th><th>TTFB</th></tr>
+  <tr><td>Homepage</td><td>0,47s / 0,33s / 0,58s</td></tr>
+  <tr><td>Thể loại</td><td>0,41s / 0,33s / 0,34s</td></tr>
+  <tr><td>Truyện</td><td>0,34s / 0,86s / 0,57s</td></tr>
+  <tr><td><b>Chương</b></td><td class="bad">0,67s / 0,95s / 1,40s</td></tr></table>
+  <p>Trang chương chậm nhất, lên tới 1,4 giây — mà đây lại là loại trang chiếm số lượng lớn nhất.</p>
+
+  <p>Header <code>no-store</code> xuất phát từ PHP session.
+  Chỉ gửi header này cho <b>trang cần đăng nhập</b> (tài khoản, thanh toán),
+  không áp dụng cho trang nội dung công khai:</p>
+<pre><code>Cache-Control: public, max-age=300, s-maxage=3600, stale-while-revalidate=86400</code></pre>`},
+
+ {id:"p2-7b", t:"Bật Cloudflare Cache Rules cho trang chương", w:"Nội dung chương là tĩnh — cache được hoàn toàn",
+  e:"1h", b:`
+  <p>Cloudflare → Caching → Cache Rules:</p>
+<pre><code>Nếu URI Path khớp /*/chuong-*
+→ Eligible for cache
+→ Edge TTL: 1 giờ
+→ Browser TTL: 5 phút</code></pre>
+  <p>Lưu ý: nếu trang chương có phần cá nhân hoá (tên user, bookmark),
+  tách phần đó ra tải bằng JS sau, hoặc dùng
+  <a href="https://developers.cloudflare.com/cache/">Cache Rules bypass theo cookie đăng nhập</a>.</p>
+  <p><b>Mục tiêu: TTFB dưới 0,3s.</b></p>`},
+
+ {id:"p2-8a", t:"Tạo sitemap_authors.xml", w:"Trang tác giả có index,follow + schema đúng nhưng không có trong sitemap nào",
+  e:"2h", b:`
+  <p>Trang <code>/tac-gia/phi-thien-ngu/</code> có:</p>
+  <ul>
+   <li><span class="good">✓</span> <code>index,follow</code></li>
+   <li><span class="good">✓</span> <code>CollectionPage</code> schema</li>
+   <li><span class="good">✓</span> H1 đúng</li>
+   <li><span class="bad">✗</span> Không có trong sitemap nào</li>
+  </ul>`},
+
+ {id:"p2-8b", t:"Thêm tiểu sử 100–200 chữ + schema Person cho trang tác giả", w:"Trang tác giả hiện chỉ là danh sách trống rỗng về nội dung",
+  e:"1 tuần", b:`
+  <ul>
+   <li>Thêm tiểu sử tác giả 100–200 chữ trên mỗi trang</li>
+   <li>Thêm schema <code>Person</code> với <code>sameAs</code> trỏ tới Wikipedia/Baidu Baike
+       nếu tác giả nổi tiếng</li>
+   <li>Ghi rõ số tác phẩm, thể loại sở trường, năm bắt đầu viết</li>
+  </ul>`},
+
+ {id:"p2-8c", t:"Sửa meta description trang tác giả", w:"Đang dùng mẫu chung, thiếu chữ 'truyện' (lỗi ngữ pháp)",
+  e:"1h", b:`
+  <p>Hiện tại: <i>"Danh sách của tác giả Phi Thiên Ngư được cập nhật thường xuyên trên website webnovel.vn"</i>
+  — thiếu chữ "truyện" và không có thông tin gì về tác giả.</p>
+  <p><b>Sửa thành:</b></p>
+<pre><code>Tuyển tập truyện của tác giả Phi Thiên Ngư — [N] tác phẩm, gồm
+[tên 2-3 truyện nổi bật]. Đọc online có bản quyền tại Webnovel.vn.</code></pre>`},
+ ]
+},
+
+{
+ id:"P3", tag:"t-p3", title:"P3 — Nâng cao",
+ note:"Tháng 2–3. Làm sau khi đã xong P0–P2.",
+ items:[
+
+ {id:"p3-1", t:"Thêm Review schema cho bài blog review", w:"Hiển thị sao đánh giá trên kết quả Google",
+  e:"1 ngày", b:`
+  <p>Site có nhiều bài dạng "Review [tên truyện]" nhưng chỉ dùng <code>BlogPosting</code>.</p>
+<pre><code>{
+  "@type": "Review",
+  "itemReviewed": {
+    "@type": "Book",
+    "name": "Huyền Giám Tiên Tộc",
+    "url": "https://webnovel.vn/huyen-giam-tien-toc/"
+  },
+  "reviewRating": {
+    "@type": "Rating",
+    "ratingValue": "4.5",
+    "bestRating": "5"
+  },
+  "author": { "@type": "Person", "name": "..." },
+  "reviewBody": "..."
+}</code></pre>`},
+
+ {id:"p3-2", t:"Tạo trang tiểu sử người viết blog + author.url + sameAs", w:"Tác giả blog hiện là bút danh không URL, không sameAs — Google coi là ẩn danh",
+  e:"3 ngày", b:`
+  <p>Bài blog hiện ghi tác giả là <i>"Đại Ái Tiên Tôn"</i> — bút danh, không có URL,
+  không có <code>sameAs</code>, không có trang tiểu sử.</p>
+  <ul>
+   <li>Tạo trang tiểu sử cho từng người viết: <code>/tac-gia-blog/[slug]/</code></li>
+   <li>Ghi rõ kinh nghiệm: đã đọc bao nhiêu bộ, chuyên về thể loại gì, viết review từ năm nào</li>
+   <li>Liên kết <code>author.url</code> trong schema trỏ về trang đó</li>
+   <li>Thêm <code>sameAs</code> tới mạng xã hội cá nhân nếu có</li>
+  </ul>
+  <p>Đây là yếu tố E-E-A-T (Experience) mà Google ngày càng coi trọng với nội dung dạng review.</p>`},
+
+ {id:"p3-3", t:"Thêm Speakable schema", w:"Cho trợ lý giọng nói và AI trích dẫn",
+  e:"2h", b:`
+<pre><code>"speakable": {
+  "@type": "SpeakableSpecification",
+  "cssSelector": [".story-summary", "h1"]
+}</code></pre>
+  <p>Đánh dấu phần tóm tắt truyện là <code>speakable</code>.</p>`},
+
+ {id:"p3-4", t:"Thêm isAccessibleForFree + hasPart cho nội dung trả phí", w:"Có mô hình freemium nhưng không khai báo cho Google → nguy cơ bị coi là cloaking",
+  e:"1 ngày", b:`
+  <p>Site có mô hình freemium (chương 1–29 miễn phí, từ chương 30 trả phí)
+  nhưng không có <code>paywall</code>, <code>isAccessibleForFree</code>,
+  hay <code>hasPart</code> nào trong HTML.</p>
+  <p>Google có chuẩn riêng cho nội dung trả phí (<i>flexible sampling</i>).
+  Khai báo đúng giúp tránh bị coi là cloaking:</p>
+<pre><code>{
+  "@type": "BookChapter",
+  "isAccessibleForFree": false,
+  "hasPart": {
+    "@type": "WebPageElement",
+    "isAccessibleForFree": false,
+    "cssSelector": ".paywalled-content"
+  }
+}</code></pre>
+  <p>Với chương miễn phí thì <code>"isAccessibleForFree": true</code>.</p>`},
+
+ {id:"p3-5", t:"Chuẩn hoá changefreq / priority trong sitemap", w:"Đang set changefreq: yearly cho chương của truyện đang cập nhật",
+  e:"2h", b:`
+  <ul>
+   <li>Chương của truyện đang ra: <code>daily</code> hoặc <code>weekly</code></li>
+   <li>Chương của truyện đã full: <code>monthly</code></li>
+   <li>Trang truyện: <code>daily</code></li>
+   <li>Trang thể loại: <code>daily</code></li>
+  </ul>
+  <p>Quan trọng hơn <code>changefreq</code> là <code>&lt;lastmod&gt;</code> chính xác —
+  Google dùng trường này nhiều hơn.</p>`},
+
+ {id:"p3-6", t:"Cân nhắc hreflang nếu mở rộng đa ngôn ngữ", w:"Hiện không có hreflang — đúng vì site chỉ tiếng Việt",
+  e:"—", b:`
+  <p>Không cần làm gì lúc này. Chỉ ghi lại để nhớ nếu sau này làm bản tiếng Anh.
+  Thẻ <code>&lt;html lang="vi"&gt;</code> hiện tại đã đúng.</p>`},
+ ]
+},
+
+{
+ id:"GEO", tag:"t-geo", title:"GEO / AIO — tối ưu để được AI trích dẫn",
+ note:"GEO khác SEO ở chỗ: SEO cần xếp hạng cao, GEO cần được trích dẫn nguyên văn trong câu trả lời. KHÔNG LÀM GÌ ĐƯỢC cho tới khi P0-1 (mở AI crawler) hoàn thành.",
+ items:[
+
+ {id:"geo-1", t:"Viết lại llms.txt theo chuẩn", w:"File hiện tại 11.596 bytes — hơi dài và mang tính liệt kê",
+  e:"3h", b:`
+  <p>Chuẩn <code>llms.txt</code> ưu tiên <b>ngắn gọn, có cấu trúc, nhiều link</b>
+  chứ không phải nhồi hết nội dung vào.</p>
+<pre><code># Webnovel.vn
+
+&gt; Nền tảng đọc truyện chữ và sách online có bản quyền tại Việt Nam,
+&gt; vận hành bởi Công ty Cổ phần TOP TALENT. Kho nội dung gồm truyện dịch
+&gt; (tiên hiệp, ngôn tình, điền văn, xuyên không, trọng sinh) và sách
+&gt; non-fiction (phát triển bản thân, kinh doanh, tâm linh).
+
+Toàn bộ nội dung đều có bản quyền hợp pháp. Mỗi truyện cho đọc miễn phí
+các chương đầu; các chương sau dành cho hội viên.
+
+## Thể loại chính
+- [Tiên hiệp](https://webnovel.vn/tien-hiep/): truyện tu tiên, tu luyện, phi thăng
+- [Ngôn tình](https://webnovel.vn/ngon-tinh/): truyện tình cảm hiện đại và cổ đại
+- [Điền văn](https://webnovel.vn/dien-van/): truyện làm ruộng, cuộc sống điền viên
+- [Xuyên không](https://webnovel.vn/xuyen-khong/): nhân vật xuyên qua thời không
+- [Trọng sinh](https://webnovel.vn/trong-sinh/): nhân vật sống lại lần hai
+
+## Danh sách và bảng xếp hạng
+- [Truyện mới cập nhật](https://webnovel.vn/all/)
+- [Truyện đã hoàn thành](https://webnovel.vn/truyen-full/)
+- [Truyện được yêu thích nhất](https://webnovel.vn/truyen-duoc-yeu-thich-nhat/)
+
+## Về chúng tôi
+- [Giới thiệu](https://webnovel.vn/about/)
+- [Chính sách bảo mật](https://webnovel.vn/privacy/)
+- [Điều khoản sử dụng](https://webnovel.vn/tos/)
+
+## Optional
+- [Blog và review truyện](https://webnovel.vn/blog/)</code></pre>
+  <p>Nguyên tắc: mục <code>## Optional</code> là phần AI có thể bỏ qua khi cần rút gọn.</p>`},
+
+ {id:"geo-2", t:'Viết lại phần mở đầu các trang chính theo lối "trả lời thẳng"', w:"AI ưu tiên trích đoạn tự chứa đủ nghĩa",
+  e:"1 tuần", b:`
+  <h4>a) Trả lời thẳng ngay câu đầu tiên</h4>
+  <p><b>Kém:</b> <i>"Khi nói đến thể loại tiên hiệp, chúng ta phải hiểu rằng đây là một thể loại
+  có lịch sử lâu đời và..."</i></p>
+  <p><b>Tốt:</b> <i>"Tiên hiệp là thể loại truyện Trung Quốc xoay quanh hành trình tu luyện
+  thành tiên của nhân vật chính, đặc trưng bởi hệ thống cảnh giới tu vi rõ ràng và
+  thế giới quan có tiên, ma, yêu."</i></p>
+
+  <h4>b) Mỗi đoạn văn tự đứng được một mình</h4>
+  <p>AI thường cắt một đoạn ra khỏi ngữ cảnh. Đoạn nào mở đầu bằng
+  <i>"Điều này có nghĩa là..."</i> sẽ vô nghĩa khi bị cắt rời.</p>
+
+  <h4>c) Đưa số liệu cụ thể</h4>
+  <p><i>"Vạn Cổ Thần Đế có 9008 chương, được đánh giá 4.5/5 bởi 252 độc giả"</i>
+  dễ được trích hơn <i>"truyện rất dài và được yêu thích"</i>.</p>
+
+  <h4>d) Đặt tiêu đề dạng câu hỏi</h4>
+  <p>"Truyện tiên hiệp là gì?" khớp trực tiếp với câu người dùng gõ vào ChatGPT.</p>`},
+
+ {id:"geo-3", t:"Thêm bảng so sánh vào trang thể loại", w:"Bảng là định dạng AI trích dẫn nhiều nhất",
+  e:"3 ngày", b:`
+  <p>Ví dụ trang tiên hiệp nên có bảng so sánh tiên hiệp / huyền huyễn / kiếm hiệp:</p>
+  <table><tr><th>Tiêu chí</th><th>Tiên hiệp</th><th>Huyền huyễn</th><th>Kiếm hiệp</th></tr>
+  <tr><td>Thế giới quan</td><td>Có tiên, ma, yêu</td><td>Tự do sáng tạo</td><td>Giang hồ võ lâm</td></tr>
+  <tr><td>Hệ thống sức mạnh</td><td>Cảnh giới tu vi</td><td>Đa dạng</td><td>Nội công, chiêu thức</td></tr>
+  <tr><td>Mục tiêu nhân vật</td><td>Phi thăng thành tiên</td><td>Tuỳ tác phẩm</td><td>Danh vọng, ân oán</td></tr>
+  </table>
+  <p>Áp dụng tương tự cho các trang thể loại khác. Bảng cũng tốt cho featured snippet trên Google.</p>`},
+
+ {id:"geo-4", t:"Tạo trang Wikidata cho Webnovel.vn", w:'Tên "webnovel" đang bị nhầm với webnovel.com của Tencent',
+  e:"1 ngày", b:`
+  <div class="callout warn"><b>Rủi ro thương hiệu đáng kể:</b>
+  hiện <code>webnovel.vn</code> chưa tồn tại như một thực thể độc lập trong tri thức của AI.
+  Khi ai đó hỏi AI về "webnovel", câu trả lời gần như chắc chắn nói về
+  <code>webnovel.com</code> — nền tảng quốc tế của Tencent.</div>
+
+  <p>AI trả lời dựa trên <b>thực thể đã biết</b>, không chỉ từ khoá.
+  Wikidata là nguồn AI đọc nhiều nhất để xác định thực thể.</p>
+  <p>Việc cần làm:</p>
+  <ol>
+   <li>Tạo mục Wikidata cho Webnovel.vn với các thuộc tính: instance of (website),
+       country (Việt Nam), official website, owned by (Công ty CP TOP TALENT), inception</li>
+   <li>Liên kết tới các nguồn tham chiếu bên ngoài (bài báo, app store)</li>
+  </ol>`},
+
+ {id:"geo-5", t:"Chuẩn hoá một câu mô tả thương hiệu dùng ở mọi nơi", w:"AI học từ sự lặp lại nhất quán",
+  e:"2h", b:`
+  <p>Viết đúng một câu mô tả, dùng y hệt trên: website (meta description, About page,
+  Organization schema), fanpage Facebook, mô tả app store, mọi bài PR, mọi profile mạng xã hội.</p>
+  <p>Ví dụ: <i>"Webnovel.vn là nền tảng đọc truyện chữ và sách online có bản quyền tại Việt Nam,
+  vận hành bởi Công ty Cổ phần TOP TALENT."</i></p>
+  <p><b>Luôn kèm định danh phân biệt:</b> viết "Webnovel.vn — nền tảng đọc truyện chữ Việt Nam"
+  thay vì chỉ "Webnovel".</p>`},
+
+ {id:"geo-6", t:"Tạo nội dung nhắm vào câu hỏi hội thoại", w:"AI nhận câu hỏi dài, tự nhiên — khác truy vấn Google",
+  e:"2 tuần", b:`
+  <p>Mỗi câu hỏi → một mục có tiêu đề đúng dạng câu hỏi đó + câu trả lời trực tiếp
+  ngay bên dưới + FAQ schema:</p>
+  <ul>
+   <li>"Đọc truyện tiên hiệp ở đâu có bản quyền?"</li>
+   <li>"Web đọc truyện chữ nào tốt nhất Việt Nam?"</li>
+   <li>"Truyện tu tiên nào hay cho người mới bắt đầu?"</li>
+   <li>"Tiên hiệp và huyền huyễn khác nhau thế nào?"</li>
+   <li>"Có app đọc truyện chữ tiếng Việt nào không?"</li>
+   <li>"Đọc truyện chữ miễn phí có hợp pháp không?"</li>
+   <li>"Truyện nào dài nhất trên webnovel.vn?"</li>
+  </ul>`},
+
+ {id:"geo-7", t:"Lập danh sách 20–30 câu hỏi để test AI hằng tháng", w:"GEO chưa có công cụ đo chuẩn — phải làm thủ công",
+  e:"3h + 2h/tháng", b:`
+  <ol>
+   <li>Lập danh sách 20–30 câu hỏi mà người dùng có thể hỏi AI về lĩnh vực của anh</li>
+   <li>Mỗi tháng hỏi lần lượt trên ChatGPT, Perplexity, Google AI Overview, Claude</li>
+   <li>Ghi lại vào Google Sheet: có được nhắc tên không, có được gắn link không,
+       thông tin có chính xác không</li>
+   <li>So sánh với đối thủ: AI đang trích dẫn ai?</li>
+  </ol>
+  <p>Cột gợi ý cho sheet: Câu hỏi | Ngày test | ChatGPT (nhắc/link) | Perplexity | AI Overview |
+  Claude | Đối thủ được nhắc | Ghi chú</p>`},
+
+ {id:"geo-8", t:"Thiết lập theo dõi referral từ AI trong GA4", w:"Đo traffic thực tế từ kênh GEO",
+  e:"1h", b:`
+  <p>GA4 → Reports → Acquisition → Traffic acquisition → thêm bộ lọc theo
+  <code>Session source</code>, lọc các nguồn:</p>
+  <ul>
+   <li><code>chatgpt.com</code> / <code>chat.openai.com</code></li>
+   <li><code>perplexity.ai</code></li>
+   <li><code>claude.ai</code></li>
+   <li><code>copilot.microsoft.com</code></li>
+   <li><code>gemini.google.com</code></li>
+  </ul>
+  <p>Tạo một Exploration lưu sẵn để xem hằng tháng.</p>`},
+ ]
+},
+
+{
+ id:"BL", tag:"t-bl", title:"Backlink — chiến lược chi tiết",
+ note:"Không đo được hồ sơ backlink hiện tại (các API miễn phí đều bị chặn hoặc hết hạn mức trong lúc audit — OpenPageRank cần khoá riêng, PageSpeed hết quota ngày, CrUX chặn theo referrer). Không đưa ra con số bịa. Điểm tích cực: AhrefsBot và SemrushBot đều truy cập được site bình thường (200), nghĩa là dữ liệu backlink vẫn đang được thu thập đầy đủ — anh chỉ cần đăng nhập vào công cụ để lấy.",
+ items:[
+
+ {id:"bl-1", t:"Xác minh Google Search Console, xem báo cáo Links", w:"Dữ liệu chính xác nhất, miễn phí, từ chính Google",
+  e:"1h", b:`
+  <table><tr><th>Công cụ</th><th>Chi phí</th><th>Lấy được gì</th></tr>
+  <tr><td><b>Google Search Console → Links</b></td><td>Miễn phí</td>
+      <td>Backlink Google thực sự ghi nhận — <b>chính xác nhất</b></td></tr>
+  <tr><td>Ahrefs Webmaster Tools</td><td>Miễn phí (cần xác minh sở hữu)</td>
+      <td>Full backlink profile, DR, anchor text</td></tr>
+  <tr><td>Semrush</td><td>Bản free 10 lượt/ngày</td><td>Backlink + so sánh đối thủ</td></tr>
+  <tr><td>Ubersuggest</td><td>Free giới hạn</td><td>Ước lượng cơ bản</td></tr></table>
+  <p>Trong GSC xem 4 mục: Top linking sites, Top linked pages, Top linking text (anchor),
+  và External links total.</p>`},
+
+ {id:"bl-2", t:"Đăng ký Ahrefs Webmaster Tools (miễn phí)", w:"Xem được full backlink profile mà không cần trả tiền",
+  e:"30 phút", b:`
+  <p>Ahrefs Webmaster Tools miễn phí cho site anh sở hữu (cần xác minh qua GSC hoặc DNS).
+  Cho xem: Referring domains, Backlinks, Anchors, Broken backlinks, Domain Rating.</p>
+  <p>Việc cần làm ngay sau khi có dữ liệu:</p>
+  <ul>
+   <li>Xem <b>Broken backlinks</b> — có link trỏ tới trang 404 không? Nếu có thì 301 về trang đúng
+       (đây là backlink miễn phí đang bị lãng phí)</li>
+   <li>Xem phân bổ anchor text có tự nhiên không</li>
+   <li>Xem có link xấu/spam nào cần disavow không</li>
+  </ul>`},
+
+ {id:"bl-3", t:"Hoàn thành P0 và P1 TRƯỚC KHI đi backlink", w:"Đẩy link về site có 13 sitemap rỗng và chương orphan là lãng phí tiền",
+  e:"—", b:`
+  <div class="callout warn">Đừng vội đi link khi nhà chưa dọn.
+  Link trỏ về một site mà Google không crawl được hết thì phần lớn giá trị bị mất.</div>`},
+
+ {id:"bl-4", t:"Dựng hồ sơ mạng xã hội + thêm vào sameAs + footer", w:"Site hiện KHÔNG có bất kỳ liên kết mạng xã hội nào",
+  e:"1 tuần", b:`
+  <h4>Số đo thật — homepage chỉ có 3 liên kết ra ngoài</h4>
+<pre><code>http://online.gov.vn/nen-tang/...                              (Bộ Công Thương)
+https://play.google.com/store/apps/details?id=com.webnovel
+https://apps.apple.com/us/app/webnovel-vn-.../id6747803327</code></pre>
+  <p>Cả 3 đều đã có <code>rel="nofollow"</code>.
+  Nghĩa là site <b>chưa có bất kỳ liên kết mạng xã hội nào</b> —
+  không Facebook, không YouTube, không TikTok trong footer.
+  Đây là tín hiệu thiếu sót lớn với cả Google lẫn AI.</p>
+
+  <table><tr><th>Nền tảng</th><th>Việc cần làm</th></tr>
+  <tr><td>Google Business Profile</td><td>Đăng ký cho Công ty CP TOP TALENT</td></tr>
+  <tr><td>Facebook Page</td><td>Tạo/hoàn thiện, điền link website</td></tr>
+  <tr><td>YouTube Channel</td><td>Tạo, điền link website ở phần About</td></tr>
+  <tr><td>TikTok</td><td>Tạo, điền link bio</td></tr>
+  <tr><td>LinkedIn Company</td><td>Tạo cho TOP TALENT</td></tr>
+  <tr><td>Google Play Store</td><td>Điền đầy đủ link website ở mục Developer</td></tr>
+  <tr><td>App Store</td><td>Tương tự</td></tr>
+  <tr><td>Wikidata</td><td>Tạo mục cho Webnovel.vn (xem GEO-4)</td></tr></table>
+
+  <p>Sau đó <b>thêm tất cả vào <code>sameAs</code></b> trong Organization schema và
+  <b>thêm icon mạng xã hội vào footer</b>.
+  Đây là backlink dễ nhất, an toàn nhất, và bắt buộc phải có cho E-E-A-T.</p>`},
+
+ {id:"bl-5", t:"Đăng ký thư mục và nền tảng Việt Nam uy tín", w:"Nền tảng cơ bản cho hồ sơ backlink",
+  e:"1 tuần", b:`
+  <ul>
+   <li>Các thư mục website Việt Nam uy tín (tránh thư mục rác)</li>
+   <li>Cổng thông tin về sách/văn học</li>
+   <li>Trang tổng hợp app Việt Nam</li>
+   <li>Hiệp hội/tổ chức ngành xuất bản nếu có tư cách thành viên</li>
+  </ul>
+  <p><b>Tiêu chí chọn:</b> thư mục đó có traffic thật không, có biên tập viên duyệt không,
+  có bao nhiêu link ra mỗi trang. Nếu trang liệt kê hàng trăm link không phân loại thì bỏ qua.</p>`},
+
+ {id:"bl-6", t:"Xuất bản báo cáo dữ liệu ngành hằng năm", w:"Hiệu quả nhất — anh có dữ liệu độc quyền mà không ai khác có",
+  e:"3–4 tuần", b:`
+  <p>Site đọc truyện khó xin link vì không ai muốn link tới trang thương mại.
+  Giải pháp là tạo nội dung mà <b>người khác muốn trích dẫn</b>.</p>
+
+  <blockquote><i>"Báo cáo Thói quen đọc truyện chữ của người Việt 2026 —
+  phân tích từ [N] triệu lượt đọc trên Webnovel.vn"</i></blockquote>
+
+  <p><b>Nội dung gợi ý:</b></p>
+  <ul>
+   <li>Thể loại nào được đọc nhiều nhất, thay đổi thế nào qua các năm</li>
+   <li>Độc giả đọc vào khung giờ nào trong ngày</li>
+   <li>Độ tuổi nào đọc thể loại gì</li>
+   <li>Độ dài trung bình một phiên đọc</li>
+   <li>Tỉ lệ đọc trên điện thoại vs máy tính</li>
+   <li>Truyện nào được đọc lại nhiều nhất</li>
+  </ul>
+  <p>Báo chí và blogger <b>rất thích trích dẫn số liệu gốc</b>.
+  Một báo cáo tốt có thể mang về hàng chục backlink chất lượng cao trong một năm.</p>
+  <p><b>Cách phát hành:</b> trang landing riêng có biểu đồ nhúng được, bản PDF tải về,
+  gửi email cho 20–30 nhà báo mảng công nghệ/văn hoá trước ngày công bố.</p>`},
+
+ {id:"bl-7", t:"Xây trang từ điển thuật ngữ truyện chữ", w:"Loại trang được link tới rất nhiều",
+  e:"1–2 tuần", b:`
+  <p>Tạo trang <code>/thuat-ngu/</code> giải thích: tu vi, cảnh giới, kim đan, nguyên anh,
+  hoá thần, hệ thống, xuyên không, trọng sinh, cẩu huyết, ngược, sủng, HE/BE/SE,
+  bạch nguyệt quang, chu sa chí, kim thủ chỉ, main, nữ phụ, nam phụ...</p>
+  <p>Người viết blog cần chỗ để giải thích thuật ngữ cho độc giả mới —
+  họ sẽ link tới trang của anh thay vì tự viết lại.</p>
+  <p><b>Cách làm cho tốt:</b></p>
+  <ul>
+   <li>Mỗi thuật ngữ có anchor link riêng (<code>/thuat-ngu/#kim-dan</code>) để link sâu được</li>
+   <li>Mỗi định nghĩa 2–4 câu, có ví dụ từ truyện cụ thể trên site (internal link)</li>
+   <li>Thêm <code>DefinedTermSet</code> schema</li>
+   <li>Có ô tìm kiếm trong trang</li>
+  </ul>`},
+
+ {id:"bl-8", t:"Xây công cụ miễn phí thu hút link", w:"Công cụ hữu ích được link tự nhiên hơn nội dung",
+  e:"2–3 tuần", b:`
+  <ul>
+   <li>Trắc nghiệm "Bạn hợp thể loại truyện nào?" — dễ share trên mạng xã hội</li>
+   <li>Công cụ tính thời gian đọc hết một bộ truyện (nhập số chương → ra số giờ/ngày)</li>
+   <li>Bảng so sánh hệ thống cảnh giới tu tiên giữa các bộ truyện nổi tiếng</li>
+   <li>Công cụ theo dõi tiến độ đọc</li>
+  </ul>`},
+
+ {id:"bl-9", t:"Xây quan hệ trong ngành", w:"Anh có bản quyền — tức là đã có quan hệ với NXB và tác giả",
+  e:"liên tục", b:`
+  <ul>
+   <li><b>Cộng đồng dịch giả và tác giả:</b> đề nghị họ đặt link tới trang tác giả trên site anh</li>
+   <li><b>Nhà xuất bản đối tác:</b> xin link từ trang "đối tác phát hành"</li>
+   <li><b>Group Facebook về truyện chữ:</b> tham gia thật, đóng góp giá trị trước, chia sẻ link sau.
+       Đừng spam.</li>
+   <li><b>Diễn đàn:</b> các diễn đàn truyện tranh/truyện chữ Việt Nam</li>
+   <li><b>Podcast/YouTube review sách:</b> tài trợ hoặc hợp tác nội dung</li>
+  </ul>`},
+
+ {id:"bl-10", t:"Triển khai PR báo chí với góc bản quyền", w:"Góc tiếp cận rất mạnh ở thị trường VN nơi phần lớn site truyện vi phạm bản quyền",
+  e:"2–4 tuần", b:`
+  <p>Với pháp nhân rõ ràng (Công ty CP TOP TALENT) và mô hình <b>có bản quyền hợp pháp</b>,
+  đây là câu chuyện báo chí thật sự có giá trị tin tức.</p>
+  <p><b>Góc tiếp cận:</b></p>
+  <ul>
+   <li>"Nền tảng đọc truyện chữ có bản quyền đầu tiên tại Việt Nam"</li>
+   <li>"Cuộc chiến bản quyền truyện dịch: mô hình trả tiền cho tác giả"</li>
+   <li>"Người Việt đọc truyện chữ như thế nào — số liệu từ [N] triệu lượt đọc"</li>
+   <li>"Vì sao độc giả Việt sẵn sàng trả tiền đọc truyện?"</li>
+  </ul>
+  <p><b>Nhắm tới:</b> chuyên mục công nghệ/văn hoá của các báo lớn, các trang tin về startup.</p>`},
+
+ {id:"bl-11", t:"Guest post có chọn lọc — và những thứ TUYỆT ĐỐI tránh", w:"Một manual action từ Google thiệt hại lớn hơn nhiều lợi ích ngắn hạn",
+  e:"liên tục", b:`
+  <p><b>Chỉ viết cho</b> site thật, có traffic thật, liên quan tới sách/văn hoá/giải trí.</p>
+  <div class="callout warn"><b>Tuyệt đối tránh:</b>
+  <ul>
+   <li>Mạng PBN (private blog network)</li>
+   <li>Site bán link công khai</li>
+   <li>Thư mục chất lượng thấp</li>
+   <li>Bình luận spam trên blog</li>
+   <li>Backlink giá rẻ mua theo gói nghìn link</li>
+  </ul>
+  Với site có bản quyền hợp pháp và định hướng thương hiệu dài hạn,
+  một án phạt thủ công từ Google sẽ thiệt hại lớn hơn nhiều so với lợi ích ngắn hạn.</div>`},
+
+ {id:"bl-12", t:"Kiểm soát phân bổ anchor text", w:"Anchor từ khoá chính xác vượt 5% là tín hiệu thao túng rõ ràng",
+  e:"liên tục", b:`
+  <table><tr><th>Loại anchor</th><th>Tỉ lệ</th><th>Ví dụ</th></tr>
+  <tr><td>Thương hiệu</td><td>40–50%</td><td>"Webnovel.vn", "Webnovel Việt Nam"</td></tr>
+  <tr><td>URL trần</td><td>15–20%</td><td>"https://webnovel.vn"</td></tr>
+  <tr><td>Chung chung</td><td>15–20%</td><td>"tại đây", "xem thêm", "trang này"</td></tr>
+  <tr><td>Từ khoá dài</td><td>10–15%</td><td>"đọc truyện tiên hiệp có bản quyền"</td></tr>
+  <tr><td>Từ khoá chính xác</td><td class="bad">dưới 5%</td><td>"đọc truyện chữ"</td></tr></table>
+  <p>Kiểm tra định kỳ trong Ahrefs → Anchors.</p>`},
+
+ {id:"bl-13", t:"Tối ưu internal link — phần anh kiểm soát 100%", w:"Trang chương gần như không có link nội bộ, trong khi là loại trang nhiều nhất",
+  e:"1–2 tuần", b:`
+  <h4>Số đo hiện tại</h4>
+  <table><tr><th>Trang</th><th>Tổng link</th><th>Link tới trang truyện</th></tr>
+  <tr><td>Homepage</td><td>232</td><td>98</td></tr>
+  <tr><td>Thể loại</td><td>151</td><td>78</td></tr>
+  <tr><td>/all/</td><td>154</td><td>79</td></tr>
+  <tr><td>Trang truyện</td><td>59</td><td>37</td></tr>
+  <tr><td><b>Trang chương</b></td><td class="bad">~2</td><td class="bad">0</td></tr></table>
+  <p>Đây là dạng liên kết hiệu quả nhất mà anh <b>không cần xin ai</b>.</p>
+  <ol>
+   <li><b>Sửa P0-2</b> (thêm danh sách chương) — cải thiện internal link lớn nhất</li>
+   <li><b>Thêm "Truyện cùng thể loại" vào trang chương</b> — mỗi trang chương thêm 5–10 link nội bộ.
+       Nhân với hàng chục nghìn trang chương, đây là lượng internal link khổng lồ.</li>
+   <li><b>Liên kết theo ngữ cảnh trong bài blog:</b> khi bài blog nhắc tên truyện,
+       luôn link tới trang truyện đó</li>
+   <li><b>Thêm liên kết chéo giữa các thể loại:</b> trang tiên hiệp link tới huyền huyễn, kiếm hiệp</li>
+   <li><b>Kiểm soát độ sâu:</b> mọi trang truyện phải cách homepage tối đa 3 lần click</li>
+  </ol>`},
+
+ {id:"bl-14", t:"Thiết lập quy trình kiểm tra sao chép nội dung hằng tháng", w:"Site nội dung có bản quyền chắc chắn bị sao chép",
+  e:"2h/tháng", b:`
+  <ul>
+   <li><b>Hằng tháng:</b> tìm trên Google đoạn văn nguyên văn từ truyện của anh
+       (đặt trong dấu ngoặc kép) để phát hiện site sao chép</li>
+   <li>Gửi <b>DMCA takedown</b> cho site vi phạm</li>
+   <li>Với site sao chép mà không thể gỡ: cân nhắc yêu cầu ghi nguồn kèm link
+       — biến vi phạm thành backlink</li>
+  </ul>
+  <p>Công cụ: Google Alerts cho tên truyện, hoặc Copyscape cho bản trả phí.</p>`},
+
+ {id:"bl-15", t:"Tìm unlinked brand mention và liên hệ xin link", w:"Nơi đã nhắc tên anh mà chưa đặt link — tỉ lệ thành công cao nhất",
+  e:"2h/tháng", b:`
+  <p>Gõ vào Google, lọc theo thời gian gần nhất:</p>
+<pre><code>"Webnovel.vn" -site:webnovel.vn</code></pre>
+  <p>Cũng thử: <code>"webnovel vn" -site:webnovel.vn</code>,
+  <code>"TOP TALENT" truyện -site:webnovel.vn</code></p>
+  <p>Với mỗi nơi nhắc tên mà chưa link: gửi email lịch sự cảm ơn họ đã nhắc tới,
+  và đề nghị thêm link để độc giả của họ tìm được. Tỉ lệ thành công thường cao
+  vì họ đã có thiện cảm sẵn.</p>
+  <p>Đặt Google Alerts cho <code>"Webnovel.vn"</code> để tự động nhận thông báo.</p>`},
+ ]
+},
+
+{
+ id:"VFY", tag:"t-bl", title:"Bộ lệnh verify tổng hợp",
+ note:"Lưu lại, chạy sau mỗi lần sửa để xác nhận. Mục này không cần tick, chỉ để tra cứu.",
+ items:[
+ {id:"vfy-all", t:"Toàn bộ lệnh verify trong một chỗ", w:"Copy về chạy sau mỗi đợt sửa",
+  e:"5 phút", b:`
+<pre><code># ===== P0-1: AI bot access =====
+for ua in "OAI-SearchBot/1.0" "ChatGPT-User/1.0" "PerplexityBot/1.0" \\
+          "Claude-Web/1.0" "GPTBot/1.0" "Googlebot/2.1"; do
+  printf "%-22s " "$ua"
+  curl -s -o /dev/null -A "$ua" -w "%{http_code}\\n" https://webnovel.vn/
+done
+
+curl -s -o /dev/null -A "PerplexityBot/1.0" -w "llms.txt: %{http_code}\\n" \\
+  https://webnovel.vn/llms.txt
+
+# ===== P0-2: Chapter crawl path =====
+curl -s https://webnovel.vn/van-co-than-de-truyen/ \\
+  | grep -o 'href="[^"]*chuong-[0-9]*[^"]*"' | sort -u | wc -l
+# Ban đầu: 0 — Hiện tại: 20 ✓ — Lý tưởng: >= 50
+
+curl -s https://webnovel.vn/kiem-khieu-linh-tieu/chuong-2/ \\
+  | grep -oE '&lt;link rel="(prev|next)"[^&gt;]*&gt;'
+# Kỳ vọng: 2 dòng — ĐÃ PASS ✓
+
+curl -s -o /dev/null -w "trang ds chương: %{http_code}\\n" \\
+  https://webnovel.vn/kiem-khieu-linh-tieu/2/
+curl -s https://webnovel.vn/kiem-khieu-linh-tieu/2/ | grep -oE '&lt;link rel="canonical"[^&gt;]*&gt;'
+# Kỳ vọng: 200 + canonical tự trỏ về /2/ — ĐÃ PASS ✓
+
+# Còn hở: link nhảy chương trên trang chương
+curl -s https://webnovel.vn/kiem-khieu-linh-tieu/chuong-250/ \\
+  | grep -oE 'href="[^"]*kiem-khieu-linh-tieu/[0-9]+/' | sort -u | wc -l
+# Hiện tại: 0 — Kỳ vọng: >= 1 (link về đúng trang ds chứa chương 250)
+
+# ===== P0-3: Sitemap =====
+for i in $(seq 1 24); do
+  n=$(curl -sL "https://webnovel.vn/sitemap/chapters/sitemap_chapter_$i.xml.gz" \\
+      | gunzip -c 2>/dev/null | grep -c "&lt;loc&gt;")
+  echo "sitemap_chapter_$i: $n"
+done
+# Kỳ vọng: không có file nào = 0
+
+curl -s -o /dev/null -w "root sitemap.xml: %{http_code} -&gt; %{redirect_url}\\n" \\
+  https://webnovel.vn/sitemap.xml
+# Kỳ vọng: 301 -&gt; /sitemap/sitemap.xml
+
+# ===== P1-1: Homepage schema =====
+curl -s https://webnovel.vn/ | grep -c 'application/ld+json'   # Kỳ vọng: >= 1
+curl -s https://webnovel.vn/ | grep -c 'property="og:'          # Kỳ vọng: >= 5
+curl -s https://webnovel.vn/ | grep -c 'SearchAction'           # Kỳ vọng: 1
+
+# ===== P1-2: Duplicate content =====
+curl -s -o /dev/null -w "www:       %{http_code} -&gt; %{redirect_url}\\n" https://www.webnovel.vn/
+curl -s -o /dev/null -w "UPPERCASE: %{http_code} -&gt; %{redirect_url}\\n" https://webnovel.vn/TIEN-HIEP/
+curl -s -o /dev/null -w "?page=2:   %{http_code} -&gt; %{redirect_url}\\n" "https://webnovel.vn/all/?page=2"
+# ?page=2 đã 301 -&gt; /all/2/ ✓ ; UPPERCASE đang 404 (chấp nhận được) ; www vẫn 200 ✗
+
+curl -s -o /dev/null -w "truyện ?page=2: %{http_code}\\n" "https://webnovel.vn/kiem-khieu-linh-tieu/?page=2"
+# Hiện tại: 200 ✗ — Kỳ vọng: 301 -&gt; /kiem-khieu-linh-tieu/2/
+
+# ===== P1-3: 404 =====
+curl -s -o /dev/null -w "404 test: %{http_code}\\n" https://webnovel.vn/trang-khong-ton-tai-xyz/
+# Kỳ vọng: 404 (không phải 302)
+
+# ===== P2-7: Performance =====
+for u in / /tien-hiep/ /van-co-than-de-truyen/ /kiem-khieu-linh-tieu/chuong-1/; do
+  printf "%-38s " "$u"
+  for i in 1 2 3; do
+    curl -s -o /dev/null --compressed -w "%{time_starttransfer} " "https://webnovel.vn$u"
+  done; echo
+done
+# Kỳ vọng: tất cả dưới 0,3s
+
+curl -sI https://webnovel.vn/kiem-khieu-linh-tieu/chuong-1/ | grep -iE "cache-control|cf-cache"
+# Kỳ vọng: có public, max-age; cf-cache-status: HIT</code></pre>
+
+  <h4>Công cụ kiểm tra trực tuyến</h4>
+  <table><tr><th>Công cụ</th><th>Dùng để</th></tr>
+  <tr><td><a href="https://search.google.com/test/rich-results" target="_blank">Rich Results Test</a></td>
+      <td>Kiểm tra schema có hợp lệ</td></tr>
+  <tr><td><a href="https://validator.schema.org/" target="_blank">Schema Validator</a></td>
+      <td>Kiểm tra schema chi tiết hơn</td></tr>
+  <tr><td><a href="https://pagespeed.web.dev/" target="_blank">PageSpeed Insights</a></td>
+      <td>Core Web Vitals (audit bị hết quota API nên anh tự chạy)</td></tr>
+  <tr><td>GSC → URL Inspection</td><td>Xem Google thực sự thấy gì</td></tr>
+  <tr><td>GSC → Sitemaps</td><td>Theo dõi số URL được index</td></tr></table>
+
+  <h4>Phụ lục — tóm tắt số liệu đo được</h4>
+  <p>Cột cuối là số đo lại ngày <b>24/08/2026</b> sau khi Minh xử lý xong
+  p0-1a/b/c, p1-1a và p1-3a.</p>
+  <p><b>Bổ sung đo ngày 27/08/2026 — nhóm crawl path chương:</b></p>
+<pre><code>Link chương trong HTML trang truyện → 20  ✓ (trước 0; lý tưởng >= 50)
+/kiem-khieu-linh-tieu/2/            → 200, canonical tự trỏ  ✓
+/van-co-than-de-truyen/451/         → 200, canonical tự trỏ  ✓ (trang cuối)
+rel="prev" / rel="next" trang chương → có cả 2 thẻ            ✓
+Description chương-1                → 151 ký tự, lấy từ nội dung thật  ✓
+/all/?page=2                        → 301 → /all/2/           ✓
+/all/?page=1                        → 301 → /all/              ✓
+/kiem-khieu-linh-tieu/?page=2       → 200 nội dung trùng trang 1  ✗
+Trang /slug/số/ trong sitemap        → 0 URL                  ✗
+Link nhảy 10/50/100 chương           → 0                      ✗
+Link chương → đúng trang ds chứa nó  → 0                      ✗
+BookChapter.name schema              → "Chương 1: Chương 1: ..."  ✗ vẫn lặp</code></pre>
+  <p><b>Bổ sung đo ngày 26/08/2026:</b></p>
+<pre><code>/sitemap.xml               → 301 → /sitemap/sitemap.xml    ✓
+/TIEN-HIEP/                → 404  (hết trùng lặp, nhưng không phải 301)
+Sitemap truyện             → 231 URL, 4 URL lỗi cũ đã dọn sạch  ✓
+Title chương-1             → "Chương 1: Phong Tuyết Cừu Sát - Kiếm Khiếu Linh Tiêu | Webnovel.vn"  ✓
+Breadcrumb HTML trang chương → có (aria-label="Breadcrumb")     ✓
+Ảnh homepage thiếu w/h     → 0/71                                ✓
+BookChapter.name schema    → "Chương 1: Chương 1: ..."           ✗ còn lặp
+Sitemap chương             → đã tăng lên 25 file (trước 24)</code></pre>
+  <table><tr><th>Chỉ số</th><th>Audit ban đầu</th><th>27/08/2026</th></tr>
+  <tr><td>Truyện trong sitemap</td><td>231 (227 trả 200)</td><td>235</td></tr>
+  <tr><td>Chương trong sitemap</td><td>881</td><td>—</td></tr>
+  <tr><td>Sitemap chương rỗng</td><td class="bad">13/24</td><td class="bad">chưa sửa (nay 25 file)</td></tr>
+  <tr><td>Link chương trong HTML trang truyện</td><td class="bad">0</td><td class="good">20</td></tr>
+  <tr><td>Trang ds chương phân trang</td><td class="bad">không có</td><td class="good">/[slug]/[trang]/</td></tr>
+  <tr><td>rel="prev" / rel="next"</td><td class="bad">không có</td><td class="good">có</td></tr>
+  <tr><td>Description trang chương</td><td class="bad">36 ký tự, lặp title</td><td class="good">151–190 ký tự, nội dung thật</td></tr>
+  <tr><td>?page=N trang danh sách</td><td class="bad">200, canonical sai</td><td class="good">301 → /N/</td></tr>
+  <tr><td>?page=N trang truyện</td><td class="bad">200</td><td class="bad">vẫn 200</td></tr>
+  <tr><td>Trang /slug/số/ trong sitemap</td><td class="bad">—</td><td class="bad">0 URL</td></tr>
+  <tr><td>Bài blog</td><td>104 (67 bắt đầu bằng "top-")</td><td>—</td></tr>
+  <tr><td>Trang thể loại/danh mục</td><td>30</td><td>30</td></tr>
+  <tr><td>JSON-LD trên homepage</td><td class="bad">0</td><td class="good">1 (@graph)</td></tr>
+  <tr><td>Organization + SearchAction</td><td class="bad">không có</td><td class="good">có</td></tr>
+  <tr><td>Open Graph trên homepage</td><td class="bad">0</td><td class="bad">0</td></tr>
+  <tr><td>Twitter Card toàn site</td><td class="bad">0</td><td class="bad">0</td></tr>
+  <tr><td>FAQ schema toàn site</td><td class="bad">0</td><td class="bad">0</td></tr>
+  <tr><td>AI bot bị chặn 403</td><td class="bad">9/15</td><td class="good">0</td></tr>
+  <tr><td>URL rác trả 404 thật</td><td class="bad">302 về homepage</td><td class="good">404</td></tr>
+  <tr><td>Chương chặn bot AI</td><td class="bad">không chặn</td><td class="good">robots.txt đã chặn</td></tr>
+  <tr><td>Chương chặn ở tầng server</td><td class="bad">không</td><td class="bad">vẫn chưa (xem p0-1e)</td></tr>
+  <tr><td>JS chặn render (homepage)</td><td>6</td><td>6</td></tr>
+  <tr><td>CSS nội tuyến</td><td>78 KB</td><td>—</td></tr>
+  <tr><td>Ảnh homepage không lazy</td><td class="bad">72/72</td><td class="bad">chưa sửa</td></tr>
+  <tr><td>TTFB trang chương</td><td>0,67–1,40s</td><td>—</td></tr>
+  <tr><td>Tỉ lệ nén (Brotli)</td><td class="good">83%</td><td class="good">83%</td></tr></table>`},
+ ]
+},
+];
+</script>
+<script src="assets/sync.js"></script>
+</body>
+</html>
