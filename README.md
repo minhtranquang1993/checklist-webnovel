@@ -3,7 +3,21 @@
 Bảng theo dõi checklist dùng chung cho cả team. Nhân viên tick xong, mọi người mở lên đều thấy —
 tick lưu trên server (Supabase), không phải trong trình duyệt từng máy.
 
-Trang chạy: **https://minhtranquang1993.github.io/checklist-webnovel/**
+## Deploy
+
+Repo là static thuần — không có bước build, không `package.json`, không dependency.
+
+**Vercel**: Add New → Project → import repo này. Framework Preset để **Other**, Build Command
+để trống, Output Directory để trống (hoặc `.`). Mỗi lần push lên `main` là Vercel tự deploy lại.
+
+Không cần sửa gì trong `assets/config.js` khi đổi domain: Supabase trả
+`Access-Control-Allow-Origin: *` nên trang gọi API được từ bất kỳ origin nào — đã kiểm tra chạy
+thật từ `localhost`, từ `file://`, và không có chỗ nào trong code phụ thuộc vào tên miền.
+
+**Sửa nhanh qua giao diện GitHub**: mở file → nút bút chì → Commit changes. Vercel sẽ deploy lại
+sau đó. Nếu sửa `webnovel-vn.html` hay `assets/config.js` theo cách này thì **chạy
+`python3 tools/verify.py` ở máy trước** — nó là thứ chặn `total` bị lệch và item id bị đổi tên
+làm mất tick, và giao diện web không chạy được nó.
 
 ## Dùng thế nào
 
