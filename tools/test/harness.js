@@ -83,6 +83,7 @@ module.exports = function load(opts) {
   const ctx = vm.createContext(sandbox);
   vm.runInContext(`const SUPABASE_URL='https://sczmmxorxivfbpwmkvqh.supabase.co';
     const SUPABASE_ANON_KEY='${opts.anonKey}';
+    const SB_HEADERS={apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+SUPABASE_ANON_KEY,'Content-Type':'application/json'};
     const CHECKLIST_ID='webnovel-vn';
     ${dataSrc}`, ctx);
 

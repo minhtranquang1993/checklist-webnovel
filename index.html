@@ -17,95 +17,55 @@
     <button class="ghost" id="btnName">Đổi tên</button>
     <span class="sp"></span>
     <span class="status load" id="status"><span class="dot"></span>Đang tải tiến độ…</span>
+    <button id="btnAdd">+ Thêm checklist</button>
   </div>
 </header>
+
+<div class="addbox" id="addbox" hidden>
+  <h3>Thêm checklist đã có trong repo</h3>
+  <p class="hint">File HTML phải đã nằm ở gốc repo (đã push lên GitHub). Form này chỉ đăng ký nó
+  để hiện ở đây và cho phép ghi tick — nó không tạo ra file.</p>
+  <div class="frow">
+    <label>Tên file <span class="req">*</span>
+      <input type="text" id="fFile" placeholder="dnd-seo.html" maxlength="64" autocomplete="off">
+      <em id="hFile">Chữ thường, gạch ngang, kết thúc bằng .html</em>
+    </label>
+    <label>Mã checklist <span class="req">*</span>
+      <input type="text" id="fId" placeholder="dnd-seo" maxlength="40" autocomplete="off">
+      <em>Phải khớp <code>CHECKLIST_ID</code> khai trong file. Không đổi được sau khi tạo.</em>
+    </label>
+  </div>
+  <div class="frow">
+    <label>Tên hiển thị <span class="req">*</span>
+      <input type="text" id="fName" placeholder="matquoctednd.vn" maxlength="80" autocomplete="off">
+    </label>
+    <label>Số hạng mục
+      <input type="text" id="fTotal" placeholder="tự dò từ file" maxlength="5" inputmode="numeric" autocomplete="off">
+      <em>Để trống thì lấy từ file. Trang checklist tự sửa lại nếu lệch.</em>
+    </label>
+  </div>
+  <label class="full">Mô tả ngắn
+    <input type="text" id="fDescr" placeholder="SEO on-page + schema cho website bệnh viện." maxlength="300" autocomplete="off">
+  </label>
+  <div class="fmsg" id="fMsg"></div>
+  <div class="factions">
+    <button id="btnSave">Đăng ký</button>
+    <button class="ghost" id="btnCancel">Huỷ</button>
+  </div>
+</div>
 
 <div class="hub" id="hub"></div>
 
 <footer>
   <p><b>Cách dùng:</b> mở checklist, nhập tên một lần, rồi tick. Tên hiện cạnh mỗi hạng mục để cả
   team biết ai đã làm việc gì. Số % ở đây đọc trực tiếp từ server, không phải từ máy bạn.</p>
-  <p><b>Thêm checklist mới:</b> thêm file HTML mới vào repo và thêm một dòng vào
-  <code>assets/config.js</code>. Xem <code>README.md</code>.</p>
+  <p><b>Thêm checklist mới:</b> tạo file HTML ở máy (copy một file có sẵn, sửa
+  <code>CHECKLIST_ID</code> và dữ liệu hạng mục), push lên GitHub, rồi bấm
+  <b>+ Thêm checklist</b> ở trên. Xem <code>README.md</code>.</p>
 </footer>
 </div>
 
 <script src="assets/config.js"></script>
-<script>
-'use strict';
-const NAME_KEY = 'chk-user-name';
-const $ = id => document.getElementById(id);
-const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-function fmtTime(iso) {
-  const d = new Date(iso);
-  if (isNaN(d)) return '';
-  const p = n => String(n).padStart(2, '0');
-  return `${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
-}
-
-function renderWho() {
-  const n = (localStorage.getItem(NAME_KEY) || '').trim();
-  $('whoami').innerHTML = n ? `Bạn đang tick với tên <b>${esc(n)}</b>` : 'Chưa nhập tên';
-}
-$('btnName').onclick = () => {
-  const cur = (localStorage.getItem(NAME_KEY) || '').trim();
-  const v = (prompt('Tên của bạn:', cur) || '').trim();
-  if (!v) return;
-  localStorage.setItem(NAME_KEY, v.slice(0, 60));
-  renderWho();
-};
-
-function card(c, stat) {
-  const done = stat ? stat.done : 0;
-  const pct = c.total ? Math.round(done / c.total * 100) : 0;
-  const col = pct >= 80 ? 'var(--p3)' : pct >= 40 ? 'var(--p2)' : pct > 0 ? 'var(--p1)' : 'var(--muted)';
-  const last = stat && stat.at
-    ? `Mới nhất: ${esc(stat.by)} · ${esc(fmtTime(stat.at))}`
-    : 'Chưa có ai tick';
-  return `<a class="card" href="${esc(c.file)}">
-    <h3>${esc(c.name)}</h3>
-    <p class="desc">${esc(c.desc)}</p>
-    <div class="num"><span><b>${done}</b> / ${c.total} hạng mục</span><span style="color:${col}">${pct}%</span></div>
-    <div class="bar"><i style="width:${pct}%;background:${col}"></i></div>
-    <div class="last">${last}</div>
-  </a>`;
-}
-
-function paint(stats) {
-  $('hub').innerHTML = CHECKLISTS.map(c => card(c, stats[c.id])).join('');
-}
-
-/* Vẽ ngay khung 0% để trang không trắng, rồi cập nhật khi có dữ liệu. */
-paint({});
-
-(async () => {
-  try {
-    const url = SUPABASE_URL.replace(/\/+$/, '') +
-      '/rest/v1/checklist_progress?select=checklist_id,done,updated_by,updated_at&done=is.true';
-    const res = await fetch(url, {
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
-      cache: 'no-store',
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const rows = await res.json();
-
-    const stats = {};
-    rows.forEach(r => {
-      const s = stats[r.checklist_id] || (stats[r.checklist_id] = { done: 0, by: '', at: '' });
-      s.done++;
-      if (!s.at || r.updated_at > s.at) { s.at = r.updated_at; s.by = r.updated_by || ''; }
-    });
-    paint(stats);
-    $('status').className = 'status ok';
-    $('status').innerHTML = '<span class="dot"></span>Tiến độ mới nhất từ server';
-  } catch (err) {
-    $('status').className = 'status err';
-    $('status').innerHTML = '<span class="dot"></span>Không tải được tiến độ — mở checklist để thử lại';
-  }
-})();
-
-renderWho();
-</script>
+<script src="assets/hub.js"></script>
 </body>
 </html>

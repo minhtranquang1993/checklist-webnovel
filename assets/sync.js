@@ -21,11 +21,8 @@
 
 const RPC = SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/rpc/tick_item';
 const REST = SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/checklist_progress';
-const HDRS = {
-  apikey: SUPABASE_ANON_KEY,
-  Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
-  'Content-Type': 'application/json',
-};
+const SYNC_TOTAL = SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/rpc/sync_checklist_total';
+const HDRS = SB_HEADERS;
 
 const NAME_KEY = 'chk-user-name';
 const QUEUE_KEY = 'chk-queue-' + CHECKLIST_ID;
@@ -540,3 +537,12 @@ applyLock();
 render();
 refreshStatus();
 pull();
+
+/* Trang này biết chính xác nó có bao nhiêu hạng mục, nên báo lại cho DB nếu lệch.
+   Nhờ vậy thêm/bớt hạng mục trong file không làm % ở trang hub sai, và không ai
+   phải sửa con số bằng tay. Lỗi ở đây không ảnh hưởng việc tick nên bỏ qua im lặng. */
+fetch(SYNC_TOTAL, {
+  method: 'POST',
+  headers: HDRS,
+  body: JSON.stringify({ p_id: CHECKLIST_ID, p_total: VALID_IDS.size }),
+}).catch(() => {});

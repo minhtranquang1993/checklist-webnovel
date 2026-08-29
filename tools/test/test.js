@@ -76,7 +76,7 @@ console.log('\nTEST 4 — loi 4xx vinh vien: bo khoi hang doi, khong retry mai (
 {
   const r = recorder([
     async rec => (rec.method === 'GET' ? jres([]) : null),
-    async rec => (rec.url.includes('rpc') ? jres({ code: '22023', message: 'ten nguoi tick phai dai 1-60 ky tu' }, 400) : null),
+    async rec => (rec.url.includes('rpc/tick_item') ? jres({ code: '22023', message: 'ten nguoi tick phai dai 1-60 ky tu' }, 400) : null),
   ]);
   const { ctx, vm, store } = load({ anonKey: ANON, fetch: r.fetch, localStorage: { 'chk-user-name': 'A' } });
   await sleep(20);
@@ -97,7 +97,7 @@ console.log('\nTEST 5 — moi hang muc 1 request rieng, chay tuan tu (ISSUE-3)')
   await sleep(20);
   vm.runInContext("setItem('geo-3', true); setItem('geo-4', true); setItem('geo-5', true);", ctx);
   await sleep(300);
-  const rpc = r.calls.filter(c => c.url.includes('rpc'));
+  const rpc = r.calls.filter(c => c.url.includes('rpc/tick_item'));
   ok(rpc.every(c => c.body.p_item_id && c.body.p_client_ts), 'moi request co p_item_id + p_client_ts');
   ok(new Set(order).size === order.length, 'khong gui trung mot hang muc: ' + JSON.stringify(order));
   ok(vm.runInContext('pendingCount()', ctx) === 0, 'hang doi da sach');
@@ -123,7 +123,7 @@ console.log('\nTEST 7 — chua nhap ten thi khong ghi duoc gi');
   vm.runInContext("setItem('geo-3', true)", ctx);
   await sleep(80);
   ok(vm.runInContext('pendingCount()', ctx) === 0, 'khong ghi vao hang doi');
-  ok(r.calls.filter(c => c.url.includes('rpc')).length === 0, 'khong goi server');
+  ok(r.calls.filter(c => c.url.includes('rpc/tick_item')).length === 0, 'khong goi server');
 }
 
 console.log('\nTEST 8 — ten nguoi tick khong bi chen vao innerHTML (ISSUE-7)');
@@ -176,13 +176,13 @@ console.log('\nTEST 10 — nut Xoa tick: go sai ten thi khong doi gi (ISSUE-9)')
   els.reset.onclick();
   await sleep(60);
   ok(vm.runInContext("state['p0-1a'].done===true && state['p0-1b'].done===true", ctx), 'go sai -> khong doi gi');
-  ok(r.calls.filter(c => c.url.includes('rpc')).length === 0, 'khong goi server');
+  ok(r.calls.filter(c => c.url.includes('rpc/tick_item')).length === 0, 'khong goi server');
 
   answer = 'webnovel-vn';
   els.reset.onclick();
   await sleep(200);
   ok(vm.runInContext("state['p0-1a'].done===false && state['p0-1b'].done===false", ctx), 'go dung -> bo tick');
-  const rpc = r.calls.filter(c => c.url.includes('rpc'));
+  const rpc = r.calls.filter(c => c.url.includes('rpc/tick_item'));
   ok(rpc.length === 2 && rpc.every(c => c.body.p_done === false), 'gui 2 request done=false');
 }
 
@@ -202,7 +202,7 @@ console.log('\nTEST 11 — refetch giua luc POST da xong nhung DB chua kip: khon
   const r = recorder([
     async rec => (rec.method === 'GET' && rec.url.includes('checklist_progress?select')
       ? new Promise(res => { releasePull = () => res(jres([])); }) : null),
-    async rec => (rec.url.includes('rpc')
+    async rec => (rec.url.includes('rpc/tick_item')
       ? new Promise(res => { releasePost = () => res(jres([{ out_item_id: rec.body.p_item_id, out_done: rec.body.p_done, out_updated_by: rec.body.p_updated_by, out_updated_at: new Date().toISOString() }])); })
       : null),
   ]);

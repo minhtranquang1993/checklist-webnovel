@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
-"""Chặn drift giữa assets/config.js và các file checklist HTML.
+"""Kiểm tra các file checklist HTML trong repo.
 
-Kiểm tra:
-  1. Mỗi entry trong CHECKLISTS có file HTML tồn tại.
-  2. `total` trong config khớp số hạng mục thật đếm được trong HTML.
-  3. `CHECKLIST_ID` khai trong HTML khớp `id` trong config.
-  4. Không có item_id trùng nhau trong cùng một file.
-  5. Không có file checklist nào bị bỏ quên (có HTML mà không có trong config).
-  6. Item id là append-only: không hạng mục nào bị xoá hay đổi tên so với
-     tools/item-ids.json. Đổi id trong HTML là mất tick của hạng mục đó trong DB.
+Danh sách checklist nằm trên Supabase (bảng `checklists`), không nằm trong repo,
+nên script này không đối chiếu với config nữa. Nó kiểm những thứ chỉ đọc file mới biết:
+
+  1. Mỗi file .html ở gốc repo (trừ index.html) phải khai `const CHECKLIST_ID`.
+  2. `CHECKLIST_ID` phải đúng định dạng và không trùng giữa các file — hai file cùng
+     mã sẽ ghi tick chồng lên nhau trong DB.
+  3. Không có item_id trùng nhau trong cùng một file.
+  4. item_id phải khớp định dạng DB chấp nhận (`^[a-z0-9][a-z0-9-]{0,39}$`), nếu không
+     `tick_item` sẽ từ chối và nhân viên không tick được hạng mục đó.
+  5. Item id là append-only: không hạng mục nào bị xoá hay đổi tên so với
+     tools/item-ids.json. Đổi id là mất tick của hạng mục đó trong DB.
+
+Số hạng mục không cần khai ở đâu cả — trang checklist tự báo lại cho DB khi mở.
 
 Chạy: python3 tools/verify.py
-       python3 tools/verify.py --update-snapshot   (sau khi CỐ Ý thêm hạng mục mới)
+       python3 tools/verify.py --update-snapshot   (sau khi CỐ Ý thêm/đổi hạng mục)
 Exit 0 = mọi thứ khớp. Exit 1 = có lệch, in rõ lệch ở đâu.
 """
 
@@ -22,39 +27,31 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CONFIG = ROOT / 'assets' / 'config.js'
 SNAPSHOT = Path(__file__).resolve().parent / 'item-ids.json'
 
-# Không phải file checklist, bỏ qua khi soát file bị bỏ quên.
+# Không phải file checklist.
 NOT_CHECKLIST = {'index.html'}
 
-ITEM_RE = re.compile(r'\{id:"([a-z0-9-]+)"')
+# Hạng mục và section trông giống nhau (`{id:"..."`), khác ở chỗ section có `tag:`
+# ngay sau id. Loại section ra bằng lookahead, thay vì dựa vào khoảng trắng —
+# file mới viết sát nhau sẽ làm cách kia đếm section thành hạng mục.
+ITEM_RE = re.compile(r'\{\s*id:"([^"]+)"(?!\s*,\s*tag:")')
 CHECKLIST_ID_RE = re.compile(r"""const\s+CHECKLIST_ID\s*=\s*['"]([^'"]+)['"]""")
-ENTRY_RE = re.compile(r'\{(.*?)\}', re.S)
+ID_FMT = re.compile(r'^[a-z0-9][a-z0-9-]{0,39}$')
 
 
-def parse_config(text):
-    """Đọc mảng CHECKLISTS trong config.js mà không cần chạy JS."""
-    start = text.find('const CHECKLISTS')
-    if start == -1:
-        sys.exit('FAIL: không tìm thấy `const CHECKLISTS` trong assets/config.js')
-    body = text[text.index('[', start): text.index('];', start)]
-
-    entries = []
-    for raw in ENTRY_RE.findall(body):
-        entry = {}
-        for key in ('id', 'file', 'name'):
-            m = re.search(rf"""{key}\s*:\s*['"]([^'"]*)['"]""", raw)
-            if m:
-                entry[key] = m.group(1)
-        m = re.search(r'total\s*:\s*(\d+)', raw)
-        if m:
-            entry['total'] = int(m.group(1))
-        if entry:
-            entries.append(entry)
-    if not entries:
-        sys.exit('FAIL: CHECKLISTS rỗng — không có checklist nào để kiểm tra')
-    return entries
+def load_snapshot(update):
+    if SNAPSHOT.exists():
+        try:
+            return json.loads(SNAPSHOT.read_text(encoding='utf-8'))
+        except json.JSONDecodeError as exc:
+            sys.exit(f'FAIL: {SNAPSHOT.name} không đọc được: {exc}')
+    if update:
+        return {}
+    sys.exit(
+        f'FAIL: không có {SNAPSHOT.name} — chạy '
+        '`python3 tools/verify.py --update-snapshot` để tạo lần đầu'
+    )
 
 
 def main():
@@ -63,84 +60,68 @@ def main():
     if unknown:
         sys.exit(f'FAIL: tham số không hiểu: {unknown}. Chỉ hỗ trợ --update-snapshot')
 
-    if not CONFIG.exists():
-        sys.exit(f'FAIL: không có {CONFIG.relative_to(ROOT)}')
-
-    entries = parse_config(CONFIG.read_text(encoding='utf-8'))
+    snapshot = load_snapshot(update)
     errors = []
-    listed_files = set()
     seen_ids = {}
     dropped = {}
+    by_cid = {}
 
-    if SNAPSHOT.exists():
-        try:
-            snapshot = json.loads(SNAPSHOT.read_text(encoding='utf-8'))
-        except json.JSONDecodeError as exc:
-            sys.exit(f'FAIL: {SNAPSHOT.name} không đọc được: {exc}')
-    elif update:
-        snapshot = {}
-    else:
-        sys.exit(
-            f'FAIL: không có {SNAPSHOT.name} — chạy '
-            '`python3 tools/verify.py --update-snapshot` để tạo lần đầu'
-        )
+    files = [p for p in sorted(ROOT.glob('*.html')) if p.name not in NOT_CHECKLIST]
+    if not files:
+        sys.exit('FAIL: không có file checklist nào ở gốc repo')
 
-    for e in entries:
-        for key in ('id', 'file', 'total'):
-            if key not in e:
-                errors.append(f"CHECKLISTS thiếu `{key}`: {e}")
-        if 'file' not in e or 'id' not in e or 'total' not in e:
-            continue
-
-        listed_files.add(e['file'])
-        path = ROOT / e['file']
-        if not path.exists():
-            errors.append(f"`{e['id']}`: không có file {e['file']}")
-            continue
-
+    for path in files:
         html = path.read_text(encoding='utf-8')
-
-        ids = ITEM_RE.findall(html)
-        seen_ids[e['id']] = ids
-        if len(ids) != e['total']:
-            errors.append(
-                f"`{e['id']}`: config ghi total={e['total']} nhưng {e['file']} có {len(ids)} hạng mục"
-            )
-
-        dupes = [k for k, v in Counter(ids).items() if v > 1]
-        if dupes:
-            errors.append(f"`{e['id']}`: item_id trùng trong {e['file']}: {sorted(dupes)}")
 
         m = CHECKLIST_ID_RE.search(html)
         if not m:
-            errors.append(f"`{e['id']}`: {e['file']} không khai `const CHECKLIST_ID`")
-        elif m.group(1) != e['id']:
             errors.append(
-                f"{e['file']} khai CHECKLIST_ID='{m.group(1)}' nhưng config ghi id='{e['id']}' "
-                "→ tick sẽ ghi vào sai chỗ trong DB"
+                f"{path.name} không khai `const CHECKLIST_ID` "
+                "→ không tick được. Nếu đây không phải file checklist, đưa vào NOT_CHECKLIST."
+            )
+            continue
+        cid = m.group(1)
+
+        if not ID_FMT.match(cid):
+            errors.append(
+                f"{path.name}: CHECKLIST_ID='{cid}' sai định dạng "
+                "(chỉ chữ thường, số, gạch ngang, tối đa 40 ký tự) → DB sẽ từ chối"
             )
 
-        # Item id chỉ được thêm. Xoá hoặc đổi tên là mất tick trong DB.
-        # `--update-snapshot` là đường thoát tường minh cho việc đổi có chủ đích,
-        # nên khi có cờ đó thì bỏ qua đúng phép kiểm này — các phép kiểm khác vẫn chặn.
-        gone = [i for i in snapshot.get(e['id'], []) if i not in set(ids)]
+        if cid in by_cid:
+            errors.append(
+                f"CHECKLIST_ID='{cid}' dùng ở cả {by_cid[cid]} và {path.name} "
+                "→ tick của hai file sẽ ghi chồng lên nhau trong DB"
+            )
+        else:
+            by_cid[cid] = path.name
+
+        ids = ITEM_RE.findall(html)
+        if not ids:
+            errors.append(f"{path.name}: không tìm thấy hạng mục nào")
+            continue
+        seen_ids[cid] = ids
+
+        dupes = sorted(k for k, v in Counter(ids).items() if v > 1)
+        if dupes:
+            errors.append(f"{path.name}: item_id trùng nhau: {dupes}")
+
+        bad = sorted({i for i in ids if not ID_FMT.match(i)})
+        if bad:
+            errors.append(
+                f"{path.name}: item_id sai định dạng: {bad} "
+                "→ tick_item sẽ từ chối, nhân viên không tick được các hạng mục này"
+            )
+
+        gone = [i for i in snapshot.get(cid, []) if i not in set(ids)]
         if gone and not update:
             errors.append(
-                f"`{e['id']}`: item_id đã biến mất khỏi {e['file']}: {gone} "
+                f"{path.name}: item_id đã biến mất: {gone} "
                 "→ tick của các hạng mục này trong DB sẽ thành mồ côi. "
                 "Nếu cố ý, chạy lại với --update-snapshot"
             )
         elif gone:
-            dropped[e['id']] = gone
-
-    for path in sorted(ROOT.glob('*.html')):
-        if path.name in NOT_CHECKLIST or path.name in listed_files:
-            continue
-        if CHECKLIST_ID_RE.search(path.read_text(encoding='utf-8')):
-            errors.append(
-                f"{path.name} là file checklist nhưng chưa có trong CHECKLISTS "
-                "→ sẽ không hiện ở trang index"
-            )
+            dropped[cid] = gone
 
     if errors:
         print('FAIL — có lệch:')
@@ -161,9 +142,9 @@ def main():
                 'Tick của các hạng mục này trong DB giờ là mồ côi — dọn bằng SQL nếu cần.'
             )
 
-    print(f'OK — {len(entries)} checklist, mọi con số khớp:')
-    for e in entries:
-        print(f"  • {e['id']:<16} {e['file']:<24} {e['total']} hạng mục")
+    print(f'OK — {len(seen_ids)} checklist:')
+    for cid, ids in seen_ids.items():
+        print(f'  • {cid:<16} {by_cid[cid]:<24} {len(ids)} hạng mục')
     return 0
 
 
