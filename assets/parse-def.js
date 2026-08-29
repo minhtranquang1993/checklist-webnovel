@@ -1,10 +1,17 @@
 /* ============================================================
    parse-def.js — bóc dữ liệu checklist từ file HTML người dùng chọn
    ------------------------------------------------------------
-   File upload theo đúng format của webnovel-vn.html: một thẻ <script> inline khai
-   `const CHECKLIST_ID`, `const SCORES`, `const SECTIONS`. Đó là **JS literal**,
-   không phải JSON — key không có ngoặc kép, `b:` dùng backtick nhiều dòng. Viết
-   parser tay cho thứ đó thì giòn, nên thay vì đoán, ta cho chính browser chạy nó.
+   File upload theo khuôn của webnovel-vn.html: một thẻ <script> inline khai
+   `const SCORES` và `const SECTIONS` (và có thể cả `const CHECKLIST_ID`). Đó là
+   **JS literal**, không phải JSON — key không có ngoặc kép, `b:` dùng backtick
+   nhiều dòng. Viết parser tay cho thứ đó thì giòn, nên thay vì đoán, ta cho chính
+   browser chạy nó.
+
+   Thứ BẮT BUỘC phải có trong file là `SECTIONS` — đó là dữ liệu hạng mục, không
+   suy ra từ đâu được. `CHECKLIST_ID` thì tuỳ chọn: nhiều file checklist bản cũ
+   (chạy độc lập, lưu tick trong localStorage) không có nó, nên trang hub suy mã từ
+   tên file rồi cho người dùng sửa. Mã đó là khoá gắn tick trong DB, nên chỉ cần nó
+   ĐÚNG và ỔN ĐỊNH, không cần phải nằm trong file.
 
    Chạy ở đâu: <iframe sandbox="allow-scripts">, KHÔNG có allow-same-origin.
    Nghĩa là script chạy trong một origin mờ (opaque):
@@ -15,7 +22,7 @@
    `event.source === iframe.contentWindow` — origin của sandbox là chuỗi "null" nên
    không dùng để so được.
 
-   Chỉ nhét phần script INLINE khai CHECKLIST_ID vào srcdoc — không nạp `<script src>`
+   Chỉ nhét phần script INLINE khai SECTIONS vào srcdoc — không nạp `<script src>`
    nào, nên file có trỏ tới assets/sync.js hay CDN gì cũng không chạy.
 
    Sau khi bóc xong, validateDef() kiểm cấu trúc và sanitize toàn bộ HTML. Hàm đó
@@ -52,16 +59,37 @@ const str = v => (v == null ? '' : String(v));
 const cut = (v, n) => str(v).slice(0, n);
 
 /* ---------- bóc giá trị bằng iframe sandbox ---------- */
-/* Lấy nội dung thẻ <script> inline có khai CHECKLIST_ID. Cố tình KHÔNG dùng
-   DOMParser ở đây: chỉ cần đúng một khối script, và cắt bằng chỉ số thì không có
-   đường nào để `<script src>` của file lọt vào srcdoc. */
+/* Lấy nội dung thẻ <script> inline có khai SECTIONS. Cố tình KHÔNG dùng DOMParser
+   ở đây: chỉ cần đúng một khối script, và cắt bằng chỉ số thì không có đường nào để
+   `<script src>` của file lọt vào srcdoc.
+
+   Bắt theo SECTIONS, không theo CHECKLIST_ID: file checklist bản cũ không có
+   CHECKLIST_ID, mà SECTIONS thì file nào cũng phải có. */
 function extractInlineScript(html) {
   const re = /<script\b(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script\s*>/gi;
   let m;
   while ((m = re.exec(html)) !== null) {
-    if (/const\s+CHECKLIST_ID\s*=/.test(m[1])) return m[1];
+    if (/(?:const|let|var)\s+SECTIONS\s*=/.test(m[1])) return m[1];
   }
   return '';
+}
+
+/* Suy mã checklist từ tên file, dùng khi file không khai CHECKLIST_ID.
+   "webnovel-ngon-tinh-checklist.html" → "webnovel-ngon-tinh-checklist"
+
+   Trả về rỗng nếu không còn ký tự nào hợp lệ (tên file toàn tiếng Việt có dấu) —
+   lúc đó giao diện bắt người dùng tự nhập, chứ không đoán bừa một mã vô nghĩa. */
+function slugFromFilename(name) {
+  const base = str(name).replace(/\.html?$/i, '').toLowerCase();
+  const slug = base
+    .replace(/[^a-z0-9]+/g, '-')      // ký tự lạ và dấu → gạch ngang
+    .replace(/-+/g, '-')              // gộp gạch liên tiếp
+    .replace(/^-+|-+$/g, '')          // cắt gạch hai đầu
+    .slice(0, 40)
+    .replace(/-+$/, '');              // cắt lần nữa: slice có thể để lại gạch cuối
+  /* DEF_ID_RE bắt buộc ký tự đầu là chữ-số. Tên file kiểu "-abc" đã bị cắt ở trên,
+     nhưng kiểm lại cho chắc thay vì trả về một mã mà validateDef sẽ từ chối. */
+  return DEF_ID_RE.test(slug) ? slug : '';
 }
 
 function runInSandbox(code, timeoutMs) {
@@ -99,15 +127,27 @@ function runInSandbox(code, timeoutMs) {
       timeoutMs
     );
 
-    /* Script của file chạy TRƯỚC, rồi script của mình đọc biến ra. Dùng typeof để
-       file thiếu SCORES vẫn bóc được phần còn lại. Bọc trong try/catch để lỗi cú
-       pháp của file thành thông báo tử tế, không phải im lặng rồi timeout. */
+    /* Script của file chạy TRƯỚC, rồi script của mình đọc biến ra. Dùng typeof cho
+       cả CHECKLIST_ID và SCORES: file bản cũ không có CHECKLIST_ID, file nào không có
+       bảng điểm thì thiếu SCORES — cả hai đều không phải lý do để bỏ cả file.
+       SECTIONS thì bắt buộc: không có nó thì không có gì để hiển thị.
+
+       Vì sao đọc được dữ liệu dù script của file NÉM giữa đường: hai thẻ <script>
+       classic dùng chung global lexical environment, nên `const` nào đã khởi tạo
+       xong vẫn còn dùng được ở thẻ sau. Đây không phải chuyện lý thuyết — file
+       checklist bản cũ đọc `localStorage` ở cuối script, mà trong sandbox origin mờ
+       thì thao tác đó ném SecurityError. Nhờ cách này, `SECTIONS` khai ở trên vẫn
+       bóc ra được.
+
+       `typeof` chứ không phải truy cập trực tiếp là có lý do: nếu file ném TRƯỚC
+       khi khai xong `SECTIONS` thì biến còn trong TDZ, và lúc đó `typeof` cũng ném
+       ReferenceError. Nên bọc cả khối trong try/catch — người dùng nhận được lý do
+       thật ("SECTIONS is not defined") thay vì trang đứng im rồi timeout 5s. */
     const reporter =
       'try{' +
-      'if(typeof CHECKLIST_ID==="undefined")throw new Error("file không khai const CHECKLIST_ID");' +
       'if(typeof SECTIONS==="undefined")throw new Error("file không khai const SECTIONS");' +
       'parent.postMessage({__def:1,json:JSON.stringify({' +
-      'id:CHECKLIST_ID,' +
+      'id:(typeof CHECKLIST_ID!=="undefined"?CHECKLIST_ID:null),' +
       'scores:(typeof SCORES!=="undefined"?SCORES:[]),' +
       'sections:SECTIONS,' +
       'title:(document.title||"")' +
@@ -128,14 +168,22 @@ function runInSandbox(code, timeoutMs) {
 
 /* ---------- kiểm cấu trúc + lọc HTML ---------- */
 /* Trả về { def, warnings } hoặc ném Error với thông báo đọc được bằng tiếng Việt.
-   Mọi HTML đi qua sanitizeHtml — kể cả `note` của nhóm, chỗ dễ bị bỏ sót nhất. */
-function validateDef(raw) {
+   Mọi HTML đi qua sanitizeHtml — kể cả `note` của nhóm, chỗ dễ bị bỏ sót nhất.
+
+   `idFromFile` chỉ đổi câu THÔNG BÁO LỖI, không đổi luật: mã suy từ tên file thì
+   bảo người dùng sửa ô mã, mã lấy từ file thì bảo sửa file. Nói sai chỗ cần sửa là
+   cách nhanh nhất để người dùng loay hoay. */
+function validateDef(raw, idFromFile) {
   if (!raw || typeof raw !== 'object') throw new Error('dữ liệu rỗng');
 
   const id = str(raw.id).trim();
   if (!DEF_ID_RE.test(id)) {
+    const where = idFromFile === false
+      ? 'Sửa ô "Mã checklist"'
+      : `Sửa \`const CHECKLIST_ID\` trong file`;
     throw new Error(
-      `CHECKLIST_ID='${cut(id, 60)}' sai định dạng — chỉ chữ thường, số, gạch ngang, tối đa 40 ký tự.`
+      (id ? `Mã checklist "${cut(id, 60)}" sai định dạng` : 'Chưa có mã checklist') +
+      ` — chỉ chữ thường, số, gạch ngang, tối đa 40 ký tự. ${where}.`
     );
   }
 
@@ -244,18 +292,32 @@ function validateDef(raw) {
   };
 }
 
-/* Đường dùng ở browser: text của file → def đã sạch. */
-async function parseChecklistFile(html) {
+/* Đường dùng ở browser: text của file → def đã sạch.
+
+   `fallbackId` là mã suy từ tên file, chỉ dùng khi file không khai CHECKLIST_ID.
+   Trả về kèm `idFromFile` để giao diện biết nên cho sửa ô mã hay khoá nó lại: mã
+   lấy từ file thì để read-only (file là nguồn thật), mã suy ra thì cho sửa. */
+async function parseChecklistFile(html, fallbackId) {
   const code = extractInlineScript(str(html));
   if (!code) {
     throw new Error(
-      'Không tìm thấy thẻ <script> nào khai `const CHECKLIST_ID` — đây có phải file checklist không? ' +
-      '(Copy webnovel-vn.html rồi sửa.)'
+      'Không tìm thấy thẻ <script> nào khai `const SECTIONS` — đây có phải file checklist không? ' +
+      '(Copy webnovel-vn.html rồi sửa dữ liệu hạng mục.)'
     );
   }
-  return validateDef(await runInSandbox(code, 5000));
+
+  const raw = await runInSandbox(code, 5000);
+  const idFromFile = !!str(raw.id).trim();
+  const parsed = validateDef(
+    Object.assign({}, raw, { id: idFromFile ? raw.id : str(fallbackId) }),
+    idFromFile
+  );
+  parsed.idFromFile = idFromFile;
+  return parsed;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { validateDef, extractInlineScript, DEF_ID_RE, LIMITS };
+  module.exports = {
+    validateDef, extractInlineScript, slugFromFilename, DEF_ID_RE, LIMITS,
+  };
 }

@@ -434,7 +434,63 @@ begin
   return query select p_id, v_name, p_total, v_created;
 end $$;
 
+-- ---------- 4d. Xoa checklist dang 'def' ----------
+-- Chi xoa duoc loai 'def'. Loai 'file' khong xoa tu web: file HTML van nam trong
+-- repo, xoa row xong lan sau ai dang ky lai la no hien lai — nhung tick thi da mat.
+--
+-- Bat go dung ma de xac nhan, giong nut "Xoa tick" trong sync.js: viec nay anh huong
+-- ca team va khong hoan tac duoc tu trang web. Bang checklist_history KHONG bi xoa
+-- (no khong co FK tro vao checklists) nen van khoi phuc duoc bang SQL.
+--
+-- Hai FK chi co `on update cascade`, KHONG co `on delete`, nen phai xoa tay dung
+-- thu tu: progress -> defs -> checklists.
+drop function if exists public.delete_checklist_def(text, text, text);
 
+create or replace function public.delete_checklist_def(
+  p_id      text,
+  p_by      text,
+  p_confirm text
+)
+returns table (out_id text, out_name text, out_ticks_deleted integer)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_by    text := trim(coalesce(p_by, ''));
+  v_kind  text;
+  v_name  text;
+  v_ticks integer;
+begin
+  if char_length(v_by) < 1 or char_length(v_by) > 60 then
+    raise exception 'can nhap ten nguoi xoa' using errcode = '22023';
+  end if;
+  if p_confirm is null or trim(p_confirm) <> p_id then
+    raise exception 'chua xac nhan dung ma checklist' using errcode = '22023';
+  end if;
+
+  select kind, name into v_kind, v_name from public.checklists where id = p_id;
+
+  if v_kind is null then
+    raise exception 'khong co checklist nao mang ma "%"', p_id using errcode = '22023';
+  end if;
+  if v_kind <> 'def' then
+    raise exception
+      'checklist "%" co noi dung nam trong file HTML trong repo, khong xoa tu web duoc. Xoa file trong repo truoc.',
+      p_id using errcode = '22023';
+  end if;
+
+  select count(*) into v_ticks
+    from public.checklist_progress where checklist_id = p_id and done;
+
+  delete from public.checklist_progress where checklist_id = p_id;
+  delete from public.checklist_defs     where id = p_id;
+  delete from public.checklists         where id = p_id;
+
+  return query select p_id, v_name, v_ticks;
+end $$;
+
+-- Tu dieu chinh so hang muc. Trang checklist biet chinh xac no co bao nhieu hang muc,
 -- nen khi mo len no bao lai cho DB neu lech. Nho vay them/bot hang muc trong HTML
 -- khong lam % o trang hub sai, va khong ai phai sua con so bang tay.
 create or replace function public.sync_checklist_total(p_id text, p_total integer)
@@ -496,6 +552,9 @@ grant execute on function public.register_checklist(text, text, text, text, inte
 
 revoke all on function public.upload_checklist_def(text, text, text, jsonb, jsonb, jsonb, integer, text, boolean) from public;
 grant execute on function public.upload_checklist_def(text, text, text, jsonb, jsonb, jsonb, integer, text, boolean) to anon;
+
+revoke all on function public.delete_checklist_def(text, text, text) from public;
+grant execute on function public.delete_checklist_def(text, text, text) to anon;
 
 revoke all on function public.sync_checklist_total(text, integer) from public;
 grant execute on function public.sync_checklist_total(text, integer) to anon;

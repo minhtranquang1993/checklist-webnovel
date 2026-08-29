@@ -45,13 +45,13 @@ assets/config.js      URL + anon key (không chứa danh sách checklist)
 assets/hub.js         Logic trang hub: đọc danh sách, tính %, upload, đăng ký
 assets/sync.js        Engine checklist: render, ghi tick, hàng đợi offline
 assets/sanitize.js    Lọc HTML người dùng upload (whitelist tag/attribute)
-assets/parse-def.js   Bóc CHECKLIST_ID/SCORES/SECTIONS từ file HTML + kiểm cấu trúc
+assets/parse-def.js   Bóc SCORES/SECTIONS từ file HTML, suy mã từ tên file, kiểm cấu trúc
 assets/checklist.css  Style dùng chung
 schema.sql            Tạo lại toàn bộ DB (chạy lại nhiều lần được)
 seed.sql              17 hạng mục đã xong trước 27/08/2026 (chạy một lần)
 tools/verify.py       Kiểm các file checklist HTML trước khi push
 tools/item-ids.json   Ảnh chụp item id — chặn việc đổi/xoá id làm mất tick
-tools/test/           70 test (chạy bằng node, không cần cài gì)
+tools/test/           90 test (chạy bằng node, không cần cài gì)
 tools/test/dom-shim.js  DOMParser tối giản để test sanitize.js trong node
 ```
 
@@ -66,6 +66,7 @@ checklist mới không phải sửa file nào, và không phải deploy lại.
 | Link ở hub | `webnovel-vn.html` | `checklist.html?id=<mã>` |
 | Thêm bằng | push repo + **Đăng ký** | **Upload file HTML** |
 | Sửa nội dung | sửa file + push | upload lại cùng file |
+| Xoá từ web | không | có (nút **Xoá** trên thẻ) |
 | `verify.py` gác | có | không — `upload_checklist_def()` gác |
 
 Tick của cả hai loại nằm chung ở `checklist_progress` và dùng cùng `assets/sync.js`.
@@ -73,13 +74,25 @@ Tick của cả hai loại nằm chung ở `checklist_progress` và dùng cùng 
 
 ## Upload file HTML (cách nhanh, không cần push repo)
 
-1. Copy `webnovel-vn.html` thành file mới ở máy. Sửa:
-   - `const CHECKLIST_ID = 'dnd-seo';` — mã này là khoá trong DB.
-   - `SCORES` và `SECTIONS` — dữ liệu hạng mục.
-   - `<title>` — dùng làm gợi ý cho tên hiển thị.
+1. Copy `webnovel-vn.html` thành file mới ở máy. Sửa `SCORES` và `SECTIONS` (dữ liệu hạng mục) và
+   `<title>` (dùng làm gợi ý cho tên hiển thị). **Không cần khai `CHECKLIST_ID`** — xem dưới.
 2. Mở trang hub → **⬆ Upload file HTML** → chọn file. Trang hiện luôn mã, số nhóm, số hạng mục
    đọc được để anh đối chiếu trước khi gửi.
 3. Bấm **Upload**. Xong — thẻ mới hiện ngay, không cần push repo, không cần chờ deploy.
+
+Thứ **bắt buộc** phải có trong file là `SECTIONS`. `CHECKLIST_ID` thì tuỳ:
+
+- File **có khai** → ô Mã checklist điền sẵn từ file và bị khoá. File là nguồn thật.
+- File **không khai** → mã suy từ tên file (`webnovel-ngon-tinh-checklist.html` →
+  `webnovel-ngon-tinh-checklist`), ô cho sửa. Đây là trường hợp của các file checklist bản cũ chạy
+  độc lập (lưu tick trong `localStorage`) — chúng không có mã vì ra đời trước khi có Supabase.
+
+Mã đó là **khoá gắn tick trong DB**, nên chỉ cần nó đúng và **ổn định**. Sau khi upload thì đừng
+đổi: đổi mã là tick của checklist đó thành mồ côi. Đổi tên file `.html` ở máy thì không sao.
+
+Engine tick riêng của file (nếu có) bị bỏ hoàn toàn — chỉ `CHECKLIST_ID`, `SCORES`, `SECTIONS` được
+lấy, còn lại `checklist.html` render bằng `assets/sync.js` dùng chung. Tick đang có trong
+`localStorage` của file cũ **không tự chuyển sang DB**; muốn giữ thì phải seed bằng SQL.
 
 Muốn sửa nội dung về sau: sửa file ở máy rồi upload lại chính nó. **Tick đã có vẫn giữ nguyên**
 vì tick gắn với `item_id`, không gắn với nội dung.
@@ -92,6 +105,20 @@ Ba thứ được gác ở bước này:
   lần; đồng ý thì mới ghi. Đây là bản chặt hơn của luật append-only bên dưới: nó chỉ báo động khi
   thật sự có tick sắp mất, không báo vì một id chưa ai dùng bị đổi tên.
 
+## Xoá checklist
+
+Đưa chuột lên thẻ ở hub → nút **Xoá** góc trên phải → gõ đúng mã để xác nhận. Thông báo nói rõ
+sẽ mất bao nhiêu hạng mục và bao nhiêu tick trước khi anh gõ.
+
+Chỉ xoá được checklist **dạng upload**. Dạng `file` như `webnovel-vn` không có nút xoá, và server
+cũng từ chối: file HTML vẫn nằm trong repo, xoá row xong lần sau ai đăng ký lại là nó hiện lại —
+nhưng tick thì đã mất. Muốn bỏ hẳn loại đó thì xoá file trong repo trước.
+
+Bảng `checklist_history` **không bị xoá** — nó append-only và không có khoá ngoại trỏ vào
+`checklists`, nên tick đã xoá vẫn khôi phục được bằng SQL. Đó là thứ làm nút xoá này chấp nhận được.
+
+## Về việc lọc nội dung upload
+
 Nội dung upload là **dữ liệu không tin được** — trang là public, ai có link cũng upload được. Vì vậy
 `assets/sanitize.js` lọc lại mọi HTML trước khi chèn vào trang: bỏ `<script>`, `<style>`, `<iframe>`,
 `<img>`, mọi `on*`, `style`, và `href="javascript:"`. Thẻ ngoài whitelist bị bỏ thẻ nhưng **giữ chữ**,
@@ -101,9 +128,13 @@ Việc bóc `SCORES`/`SECTIONS` phải chạy chính JS của file (đó là JS 
 trong `<iframe sandbox="allow-scripts">` không có `allow-same-origin`: origin mờ, không đọc được DOM
 của hub, không đọc được `localStorage`, không thấy anon key. Đường ra duy nhất là `postMessage`.
 
+Chính vì origin mờ mà engine của file checklist bản cũ **ném lỗi** khi nó đọc `localStorage` — và
+điều đó không sao: hai thẻ `<script>` dùng chung phạm vi global, nên `SECTIONS` khai ở trên vẫn bóc
+ra được sau khi script ném. Test 19 trong `tools/test/test.js` giữ đúng tình huống này.
+
 `checklist.html` lấy mã từ `?id=` — nghe như trái với luật "đừng lấy từ URL" ở dưới, nhưng lý do của
-luật đó không áp dụng ở đây: mã không suy ra từ tên file, nó là **khoá chính trong DB** và phải có
-trong `checklist_defs` mới render được. Đổi tên file `.html` ở máy không ảnh hưởng gì.
+luật đó không áp dụng ở đây: mã không suy ra từ tên file **của trang đang mở**, nó là **khoá chính
+trong DB** và phải có trong `checklist_defs` mới render được.
 
 ## Thêm checklist dạng file (cách cũ, file tự render lấy)
 
@@ -151,7 +182,7 @@ node --check assets/sync.js        # cú pháp JS
 node --check assets/hub.js
 node --check assets/sanitize.js
 node --check assets/parse-def.js
-node tools/test/test.js            # 70 test: hàng đợi, gộp dữ liệu, chống mất tick, sanitize, parse
+node tools/test/test.js            # 90 test: hàng đợi, gộp dữ liệu, chống mất tick, sanitize, parse
 ```
 
 `sanitize.js` cần `DOMParser` — node không có, và repo không có dependency, nên test dùng
@@ -163,18 +194,23 @@ browser theo mục dưới.
 
 Chạy `python3 -m http.server 8899` rồi:
 
-1. Copy `webnovel-vn.html` → `test-up.html`, sửa `CHECKLIST_ID='test-up'`, cắt còn ~3 hạng mục.
-   Upload → thẻ mới hiện → mở ra tick được → refresh vẫn còn → % ở hub đúng.
-2. Sửa chữ một hạng mục rồi upload lại → nội dung đổi, **tick giữ nguyên**.
-3. Xoá một hạng mục **đã tick** rồi upload lại → phải bị chặn kèm tên id đó.
-4. Upload file có `CHECKLIST_ID='webnovel-vn'` → phải bị chặn.
+1. Copy `webnovel-vn.html` → `test-up.html`, **xoá dòng `const CHECKLIST_ID`**, cắt còn ~3 hạng mục.
+   Upload → ô Mã checklist phải điền `test-up` (suy từ tên file) và **cho sửa** → Upload → thẻ mới
+   hiện → mở ra tick được → refresh vẫn còn → % ở hub đúng.
+2. Upload `webnovel-vn.html` (file **có** `CHECKLIST_ID`) → ô mã phải hiện `webnovel-vn` và bị
+   **khoá**, rồi bị chặn vì trùng với checklist dạng file.
+3. Sửa chữ một hạng mục trong `test-up.html` rồi upload lại → nội dung đổi, **tick giữ nguyên**.
+4. Xoá một hạng mục **đã tick** rồi upload lại → phải bị chặn kèm tên id đó.
 5. Nhét `<script>alert(1)</script>` và `<a href="javascript:alert(1)">` vào phần `b` → upload →
    mở trang: **không** có alert, DevTools không thấy thẻ `script`.
 6. Mở `checklist.html` không có `?id=`, và `?id=khong-ton-tai` → thông báo lỗi tử tế, không trang trắng.
 7. Tick khi tắt mạng → hiện "chưa lưu" → bật mạng → tự đẩy lên.
+8. Nút **Xoá**: thẻ `webnovel-vn` **không có** nút; thẻ `test-up` có. Gõ sai mã → không xoá gì. Gõ
+   đúng → thẻ biến mất, thông báo nói đúng số tick đã xoá, và mở lại `checklist.html?id=test-up`
+   phải báo "không có checklist nào mang mã này".
 
-Dọn sau khi xong: xoá `test-up.html` ở máy, và trên Supabase
-`delete from checklist_progress where checklist_id='test-up';`
+Dọn sau khi xong: xoá `test-up.html` ở máy. Nếu đã dùng nút Xoá thì DB sạch rồi; nếu chưa, chạy
+`delete from checklist_progress where checklist_id='test-up';` rồi
 `delete from checklists where id='test-up';` (bảng `checklist_defs` tự xoá theo).
 
 ## Về bảo mật
@@ -184,7 +220,7 @@ Quyền thật do Postgres quyết định:
 
 - anon **chỉ đọc** ba bảng `checklist_progress`, `checklists` và `checklist_defs`. Không có quyền
   INSERT/UPDATE/DELETE trực tiếp trên bảng nào.
-- Mọi thao tác ghi đi qua bốn hàm, mỗi hàm làm đúng một việc:
+- Mọi thao tác ghi đi qua năm hàm, mỗi hàm làm đúng một việc:
   - `tick_item()` — **một request một hạng mục**. Không có đường nào để một request sửa sạch cả
     bảng. Từ chối bản ghi cũ hơn bản đang có (so `client_ts`), nên một tab để mở từ sáng, đẩy lên
     lúc chiều, không xoá được việc người khác làm lúc trưa.
@@ -194,6 +230,8 @@ Quyền thật do Postgres quyết định:
   - `upload_checklist_def()` — thêm mới hoặc cập nhật nội dung checklist dạng `def`. **Từ chối** ghi
     lên một mã đang thuộc checklist dạng `file`, và **từ chối** bản upload làm mất tick của hạng mục
     đã được tick (trừ khi người dùng xác nhận). Không sửa được `kind` của row đang có.
+  - `delete_checklist_def()` — xoá checklist dạng `def`. Bắt gõ đúng mã (`p_confirm` phải khớp
+    `p_id`), và **từ chối** dạng `file`. Không xoá `checklist_history` nên vẫn khôi phục được.
   - `sync_checklist_total()` — chỉ sửa được đúng cột `total`, giới hạn 0–5000.
 - `item_id` phải khớp `^[a-z0-9][a-z0-9-]{0,39}$`, `checklist_id` phải có trong bảng `checklists` →
   không bơm được row rác làm sai % tiến độ.
@@ -212,10 +250,16 @@ repo quyết định, mà repo thì chỉ người có quyền push mới sửa 
 `~/.config/supabase/webnovel-checklist.env` (chmod 600). Chỉ cần chúng khi chạy `schema.sql` /
 `seed.sql` hoặc khôi phục dữ liệu.
 
-Trang là public nên ai có link đều tick được, đăng ký được và **upload được** checklist, và tên là tự
-khai. Đây là lựa chọn có ý thức: đổi tính chặt chẽ lấy việc không phải quản lý tài khoản cho nhân
-viên. Trước đây còn một ràng buộc phụ — checklist mới chỉ hiện được nếu file HTML đã có trong repo —
-**ràng buộc đó không còn với dạng `def`**: upload không cần push repo. Đổi lại, nội dung upload bị
-sanitize, và ai đó phá thì chỉ phá được nội dung hiển thị, không chạy được code và không đọc được
-tick của checklist khác. Nếu cần siết, thêm kiểm tra mật khẩu chung vào `upload_checklist_def()`,
+Trang là public nên ai có link đều tick được, đăng ký được, **upload được** và **xoá được** checklist
+dạng `def`, và tên là tự khai. Đây là lựa chọn có ý thức: đổi tính chặt chẽ lấy việc không phải quản
+lý tài khoản cho nhân viên. Trước đây còn một ràng buộc phụ — checklist mới chỉ hiện được nếu file
+HTML đã có trong repo — **ràng buộc đó không còn với dạng `def`**: upload không cần push repo.
+
+Đổi lại, ba thứ giữ thiệt hại ở mức có thể sửa được:
+- Nội dung upload bị sanitize, nên phá thì chỉ phá được phần hiển thị, không chạy được code.
+- `webnovel-vn` là dạng `file` nên **không xoá được từ web**, và mọi checklist dạng `file` cũng vậy.
+- `checklist_history` giữ mọi thay đổi và anon không đọc được, nên tick đã xoá vẫn khôi phục được
+  bằng SQL.
+
+Nếu cần siết, thêm kiểm tra mật khẩu chung vào `upload_checklist_def()` và `delete_checklist_def()`,
 hoặc bật Supabase Auth.

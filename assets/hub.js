@@ -78,13 +78,23 @@ function card(c, stat) {
     ? '<span class="kind def" title="Nội dung lưu trên server — sửa bằng cách upload lại file">upload</span>'
     : '<span class="kind" title="Nội dung nằm trong file HTML trong repo">repo</span>';
 
-  return `<a class="card" href="${hrefOf(c)}">
-    <h3>${esc(c.name)}${kind}</h3>
-    <p class="desc">${esc(c.descr || '')}</p>
-    <div class="num">${count}</div>
-    <div class="bar"><i style="width:${pct}%;background:${col}"></i></div>
-    <div class="last">${last}</div>
-  </a>`;
+  /* Nút xoá nằm NGOÀI thẻ <a>, không lồng trong: <a> bọc cả thẻ nên nút bên trong
+     sẽ vừa xoá vừa mở checklist. Chỉ vẽ cho dạng `def` — dạng `file` xoá từ web là
+     vô nghĩa (file vẫn trong repo, đăng ký lại là hiện lại, nhưng tick đã mất). */
+  const del = c.kind === 'def'
+    ? `<button class="card-del" data-id="${esc(c.id)}" type="button"
+         title="Xoá checklist này khỏi hub" aria-label="Xoá ${esc(c.name)}">Xoá</button>`
+    : '';
+
+  return `<div class="card-wrap">
+    <a class="card" href="${hrefOf(c)}">
+      <h3>${esc(c.name)}${kind}</h3>
+      <p class="desc">${esc(c.descr || '')}</p>
+      <div class="num">${count}</div>
+      <div class="bar"><i style="width:${pct}%;background:${col}"></i></div>
+      <div class="last">${last}</div>
+    </a>${del}
+  </div>`;
 }
 
 function paint(list, stats) {
@@ -98,6 +108,9 @@ function paint(list, stats) {
 
 /* ---------- tải danh sách + tiến độ ---------- */
 let checklists = [];
+/* Tiến độ của lần load gần nhất. removeChecklist() cần nó để nói đúng số tick sắp
+   mất — con số đó là thứ quyết định người dùng có bấm tiếp hay không. */
+let lastStats = {};
 
 async function load() {
   try {
@@ -130,6 +143,7 @@ async function load() {
       if (!s.at || r.updated_at > s.at) { s.at = r.updated_at; s.by = r.updated_by || ''; }
     });
 
+    lastStats = stats;
     paint(checklists, stats);
     setStatus('ok', 'Tiến độ mới nhất từ server');
   } catch (err) {
@@ -265,8 +279,10 @@ function uMsg(kind, text) {
   el.textContent = text;
 }
 
-/* def của file vừa chọn, đã validate + sanitize. null = chưa có gì để upload. */
+/* def của file vừa chọn, đã validate + sanitize. null = chưa có gì để upload.
+   `idLocked` = mã do file tự khai (read-only), false = mã suy từ tên file (cho sửa). */
 let pending = null;
+let idLocked = false;
 
 function setInfo(html, warn) {
   const box = $('uInfo');
@@ -277,10 +293,10 @@ function setInfo(html, warn) {
 
 function closeUpload() {
   $('upbox').hidden = true;
-  $('uFile').value = '';
-  $('uName').value = '';
-  $('uDescr').value = '';
+  ['uFile', 'uId', 'uName', 'uDescr'].forEach(k => { $(k).value = ''; });
+  $('uId').readOnly = false;
   pending = null;
+  idLocked = false;
   $('btnUpSave').disabled = true;
   setInfo('');
   uMsg('', '');
@@ -296,11 +312,61 @@ function openUpload() {
 $('btnUpload').onclick = () => ($('upbox').hidden ? openUpload() : closeUpload());
 $('btnUpCancel').onclick = closeUpload;
 
+/* Vẽ lại hộp tóm tắt theo mã đang có trong ô. Gọi sau khi đọc file và mỗi lần
+   người dùng sửa ô mã — trùng mã là thứ phải biết TRƯỚC khi bấm Upload, không phải
+   sau khi server từ chối. */
+function refreshUploadInfo(warnings) {
+  if (!pending) return;
+  const id = $('uId').value.trim().toLowerCase();
+
+  let warn = false;
+  let extra = '';
+
+  if (!ID_RE.test(id)) {
+    warn = true;
+    extra = `<br><span class="k">Mã không hợp lệ</span> — chỉ chữ thường, số và gạch ngang,
+      bắt đầu bằng chữ hoặc số.`;
+  } else {
+    /* Ba trường hợp khác nhau hoàn toàn, nên nói rõ từng cái. */
+    const clash = checklists.find(c => c.id === id);
+    if (clash && clash.kind === 'def') {
+      warn = true;
+      extra = `<br><span class="k">Mã này đã có</span> — upload sẽ <b>cập nhật nội dung</b> của
+        "${esc(clash.name)}". Tick đã có vẫn giữ nguyên.`;
+    } else if (clash) {
+      warn = true;
+      extra = `<br><span class="k">Mã này đang thuộc file trong repo</span>
+        (<b>${esc(clash.file || '')}</b>) — server sẽ <b>từ chối</b>. Đổi sang mã khác.`;
+    }
+  }
+
+  const warns = (warnings && warnings.length)
+    ? '<ul>' + warnings.map(w => `<li>${esc(w)}</li>`).join('') + '</ul>'
+    : '';
+
+  setInfo(
+    `<span class="k">Mã checklist:</span> <b>${esc(id || '(chưa có)')}</b> ·
+     <b>${pending.sections.length}</b> nhóm ·
+     <b>${pending.total}</b> hạng mục${extra}${warns}`,
+    warn || !!(warnings && warnings.length)
+  );
+
+  $('btnUpSave').disabled = !ID_RE.test(id);
+}
+
+/* Người dùng sửa ô mã → kiểm lại ngay. Chỉ có tác dụng khi mã là suy từ tên file;
+   mã do file khai thì ô đang readOnly nên sự kiện này không chạy. */
+let lastWarnings = [];
+$('uId').oninput = () => refreshUploadInfo(lastWarnings);
+
 /* Chọn file → đọc → bóc → validate → hiện tóm tắt. Chưa gửi gì lên server ở bước
    này, để người dùng thấy trước cái mình sắp upload. */
 $('uFile').onchange = async () => {
   const f = $('uFile').files && $('uFile').files[0];
   pending = null;
+  idLocked = false;
+  lastWarnings = [];
+  $('uId').readOnly = false;
   $('btnUpSave').disabled = true;
   setInfo('');
   if (!f) return uMsg('', '');
@@ -311,41 +377,28 @@ $('uFile').onchange = async () => {
 
   uMsg('', `Đang đọc ${f.name}…`);
   try {
-    const parsed = await parseChecklistFile(await f.text());
+    /* Mã suy từ tên file chỉ được dùng khi file không tự khai — parseChecklistFile
+       quyết định chuyện đó và báo lại qua `idFromFile`. */
+    const parsed = await parseChecklistFile(await f.text(), slugFromFilename(f.name));
     pending = parsed.def;
+    idLocked = parsed.idFromFile;
+    lastWarnings = parsed.warnings;
 
-    /* Trùng mã với checklist đang có: nói rõ chuyện gì sẽ xảy ra, vì hai trường hợp
-       khác nhau hoàn toàn — một cái là cập nhật, một cái là bị chặn. */
-    const clash = checklists.find(c => c.id === pending.id);
-    let warn = false;
-    let extra = '';
-    if (clash && clash.kind === 'def') {
-      warn = true;
-      extra = `<br><span class="k">Mã này đã có</span> — upload sẽ <b>cập nhật nội dung</b> của
-        "${esc(clash.name)}". Tick đã có vẫn giữ nguyên.`;
-    } else if (clash) {
-      warn = true;
-      extra = `<br><span class="k">Mã này đang thuộc file trong repo</span>
-        (<b>${esc(clash.file || '')}</b>) — server sẽ <b>từ chối</b>. Đổi
-        <code>CHECKLIST_ID</code> trong file thành mã khác.`;
-    }
-
-    const warns = parsed.warnings.length
-      ? '<ul>' + parsed.warnings.map(w => `<li>${esc(w)}</li>`).join('') + '</ul>'
-      : '';
-
-    setInfo(
-      `<span class="k">Mã checklist:</span> <b>${esc(pending.id)}</b> ·
-       <b>${pending.sections.length}</b> nhóm ·
-       <b>${pending.total}</b> hạng mục${extra}${warns}`,
-      warn || parsed.warnings.length > 0
-    );
+    $('uId').value = pending.id;
+    $('uId').readOnly = idLocked;
+    $('uIdHint').innerHTML = idLocked
+      ? 'Lấy từ <code>CHECKLIST_ID</code> khai trong file. Sau khi upload thì <b>đừng đổi</b>.'
+      : 'File không khai <code>CHECKLIST_ID</code> — mã này suy từ tên file. Sửa được, nhưng ' +
+        'sau khi upload thì <b>đừng đổi</b> (đổi là mất tick).';
 
     if (!$('uName').value.trim()) {
       $('uName').value = (pending.meta.title || pending.id).slice(0, 80);
     }
-    $('btnUpSave').disabled = false;
-    uMsg('ok', 'Đọc xong — kiểm lại rồi bấm Upload.');
+
+    refreshUploadInfo(lastWarnings);
+    uMsg('ok', idLocked
+      ? 'Đọc xong — kiểm lại rồi bấm Upload.'
+      : 'Đọc xong — kiểm mã checklist rồi bấm Upload.');
   } catch (err) {
     uMsg('err', err.message);
   }
@@ -354,6 +407,11 @@ $('uFile').onchange = async () => {
 async function upload(force) {
   if (!pending) return uMsg('err', 'Chọn file HTML trước.');
   if (!userName && !askName()) return;
+
+  /* Mã đọc từ ô, không từ `pending.id`: khi file không tự khai, người dùng có thể
+     đã sửa nó sau khi file được đọc. */
+  const id = $('uId').value.trim().toLowerCase();
+  if (!ID_RE.test(id)) return uMsg('err', 'Mã checklist chỉ gồm chữ thường, số và gạch ngang.');
 
   const name = $('uName').value.trim();
   if (!name) return uMsg('err', 'Nhập tên hiển thị.');
@@ -365,7 +423,7 @@ async function upload(force) {
       method: 'POST',
       headers: SB_HEADERS,
       body: JSON.stringify({
-        p_id: pending.id,
+        p_id: id,
         p_name: name,
         p_descr: $('uDescr').value.trim(),
         p_scores: pending.scores,
@@ -409,6 +467,68 @@ async function upload(force) {
 $('btnUpSave').onclick = () => upload(false);
 $('upbox').addEventListener('keydown', e => {
   if (e.key === 'Escape') closeUpload();
+});
+
+/* ---------- xoá checklist ---------- */
+/* Chỉ xoá được checklist dạng `def`. Dạng `file` không xoá từ đây: file HTML vẫn
+   nằm trong repo, xoá row xong lần sau ai đăng ký lại là nó hiện lại — nhưng tick
+   thì đã mất. Server cũng chặn, đây chỉ là lớp đầu.
+
+   Bắt gõ đúng mã để xác nhận, giống nút "Xoá tick" trong sync.js: việc này ảnh
+   hưởng cả team và không hoàn tác được từ trang này. Bảng checklist_history vẫn giữ
+   mọi thay đổi nên khôi phục được bằng SQL. */
+async function removeChecklist(id) {
+  const c = checklists.find(x => x.id === id);
+  if (!c || c.kind !== 'def') return;
+  if (!userName && !askName()) return;
+
+  const stat = lastStats[id];
+  const ticked = stat ? stat.done : 0;
+
+  const answer = prompt(
+    `Xoá checklist "${c.name}" khỏi hub — của CẢ TEAM, không chỉ máy bạn.\n` +
+    `Mất: ${c.total || 0} hạng mục` + (ticked ? ` và ${ticked} tick đã có` : ' (chưa ai tick)') + '.\n' +
+    'Việc này không hoàn tác được từ trang này.\n\n' +
+    `Gõ đúng "${id}" để xác nhận:`
+  );
+  if (answer === null) return;
+  if (answer.trim() !== id) {
+    setStatus('err', 'Gõ không đúng — đã huỷ, không có gì thay đổi.');
+    return;
+  }
+
+  setStatus('load', 'Đang xoá…');
+  try {
+    const res = await fetch(`${REST}/rpc/delete_checklist_def`, {
+      method: 'POST',
+      headers: SB_HEADERS,
+      body: JSON.stringify({ p_id: id, p_by: userName, p_confirm: answer.trim() }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      let m2 = '';
+      try { m2 = JSON.parse(body).message || ''; } catch { m2 = body.slice(0, 300); }
+      throw new Error(m2 || 'HTTP ' + res.status);
+    }
+    const rows = await res.json().catch(() => []);
+    const gone = Array.isArray(rows) && rows[0] ? rows[0].out_ticks_deleted : 0;
+    await load();
+    setStatus('ok', `Đã xoá "${c.name}"` + (gone ? ` và ${gone} tick` : ''));
+  } catch (err) {
+    setStatus('err', 'Không xoá được: ' + err.message);
+  }
+}
+
+/* Uỷ quyền sự kiện trên #hub: thẻ được vẽ lại mỗi lần load() nên gắn onclick vào
+   từng nút sẽ mất sau lần vẽ đầu. */
+$('hub').addEventListener('click', e => {
+  const btn = e.target.closest('.card-del');
+  if (!btn) return;
+  /* Nút nằm cạnh thẻ <a>, không nằm trong — nhưng chặn cả hai cho chắc, vì thẻ
+     bọc ngoài có thể đổi cấu trúc về sau. */
+  e.preventDefault();
+  e.stopPropagation();
+  removeChecklist(btn.dataset.id);
 });
 
 /* ---------- khởi động ---------- */

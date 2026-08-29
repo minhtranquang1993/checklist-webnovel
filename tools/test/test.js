@@ -244,7 +244,9 @@ console.log('PHAN 2 — sanitize.js + parse-def.js (checklist upload tu trang hu
    sanitize.js, vi module do doc `typeof DOMParser` luc chay ham. */
 global.DOMParser = require('./dom-shim.js').DOMParser;
 const { sanitizeHtml } = require('../../assets/sanitize.js');
-const { validateDef, extractInlineScript } = require('../../assets/parse-def.js');
+const {
+  validateDef, extractInlineScript, slugFromFilename,
+} = require('../../assets/parse-def.js');
 
 /* Def toi thieu, hop le. Moi test sua mot cho de kiem dung mot luat. */
 const defOf = over => Object.assign({
@@ -295,15 +297,39 @@ console.log('\nTEST 13 — sanitize: bo script/style/on*/javascript: nhung GIU c
   ok(/&lt;link/.test(inCode), 'giu nguyen doan huong dan de doc');
 }
 
-console.log('\nTEST 14 — extractInlineScript: chi lay khoi khai CHECKLIST_ID, bo qua <script src>');
+console.log('\nTEST 14 — extractInlineScript: bat theo SECTIONS, bo qua <script src>');
 {
   const html = '<script src="assets/sync.js"></script>' +
     '<script>var x=1;</script>' +
     '<script>\nconst CHECKLIST_ID = "abc";\nconst SECTIONS=[];\n</script>';
   const code = extractInlineScript(html);
-  ok(/CHECKLIST_ID/.test(code), 'lay dung khoi co CHECKLIST_ID');
+  ok(/CHECKLIST_ID/.test(code), 'lay dung khoi co du lieu');
   ok(!/sync\.js/.test(code) && !/var x=1/.test(code), 'khong lay khoi khac, khong lay <script src>');
   ok(extractInlineScript('<script src="a.js"></script>') === '', 'file khong co khoi nao -> rong');
+
+  /* HOI QUY cho dung loi Minh gap: file checklist ban cu chi co SCORES + SECTIONS,
+     KHONG co CHECKLIST_ID. Truoc day bi tu choi thang. */
+  const legacy = '<script>\nconst SCORES=[["A",7,"x"]];\nconst SECTIONS=[{id:"P0"}];\n</script>';
+  ok(/SECTIONS/.test(extractInlineScript(legacy)), 'file KHONG co CHECKLIST_ID van boc duoc');
+
+  ok(/SECTIONS/.test(extractInlineScript('<script>let SECTIONS=[];</script>')), 'nhan ca `let`');
+  ok(extractInlineScript('<script>const SCORES=[];</script>') === '',
+     'chi co SCORES, khong co SECTIONS -> rong (khong co du lieu hang muc)');
+}
+
+console.log('\nTEST 14b — slugFromFilename: suy ma tu ten file khi file khong khai');
+{
+  const s = slugFromFilename;
+  ok(s('webnovel-ngon-tinh-checklist.html') === 'webnovel-ngon-tinh-checklist', 'ten file thuong');
+  ok(s('DND-SEO.HTML') === 'dnd-seo', 'ha chu thuong, nhan .HTML');
+  ok(s('checklist_2026.htm') === 'checklist-2026', 'gach duoi -> gach ngang, nhan .htm');
+  ok(s('my file (1).html') === 'my-file-1', 'khoang trang va ngoac -> gach ngang, khong gach doi');
+  ok(s('a'.repeat(60) + '.html').length === 40, 'cat con 40 ky tu');
+  ok(s('---.html') === '', 'ten toan gach -> rong (bat nguoi dung tu nhap)');
+  ok(s('') === '', 'ten rong -> rong');
+  /* Tieng Viet co dau: khong tu y bo dau thanh chu khong dau, chi doi thanh gach.
+     Ket qua van la ma hop le, va nguoi dung sua duoc. */
+  ok(/^[a-z0-9][a-z0-9-]*$/.test(s('Truyện ngôn tình.html')), 'ten co dau van ra ma hop le');
 }
 
 console.log('\nTEST 15 — validateDef: def hop le -> dem dung, HTML da duoc loc');
@@ -328,7 +354,7 @@ console.log('\nTEST 15 — validateDef: def hop le -> dem dung, HTML da duoc loc
 console.log('\nTEST 16 — validateDef: chan cac loi lam mat tick hoac lam DB tu choi');
 {
   throws(() => validateDef(defOf({ id: 'Test_Up' })), /sai định dạng/, 'CHECKLIST_ID chu hoa/gach duoi');
-  throws(() => validateDef(defOf({ id: '' })), /sai định dạng/, 'CHECKLIST_ID rong');
+  throws(() => validateDef(defOf({ id: '' })), /Chưa có mã checklist/, 'ma rong');
   throws(() => validateDef(defOf({ sections: [] })), /không được rỗng/, 'SECTIONS rong');
   throws(() => validateDef(defOf({ sections: 'x' })), /phải là mảng/, 'SECTIONS khong phai mang');
   throws(() => validateDef(defOf({
@@ -355,6 +381,56 @@ console.log('\nTEST 17 — validateDef: SCORES meo thi canh bao, KHONG chan ca f
   ok(r2.def.scores.length === 0 && r2.warnings.length === 1, 'SCORES khong phai mang -> bo + canh bao');
   const r3 = validateDef(defOf({ scores: [['Qua cao', 99, '']] }));
   ok(r3.def.scores[0][1] === 10, 'diem bi ep vao 0-10: ' + r3.def.scores[0][1]);
+}
+
+console.log('\nTEST 18 — thong bao loi chi dung cho can sua (o ma vs trong file)');
+{
+  /* Noi sai cho can sua la cach nhanh nhat de nguoi dung loay hoay: ma suy tu ten
+     file thi sua o tren trang, ma lay tu file thi phai sua file. */
+  throws(() => validateDef(defOf({ id: 'Bad_Id' }), false), /Sửa ô "Mã checklist"/,
+    'ma suy ra -> bao sua o tren trang');
+  throws(() => validateDef(defOf({ id: 'Bad_Id' }), true), /CHECKLIST_ID` trong file/,
+    'ma tu file -> bao sua file');
+  throws(() => validateDef(defOf({ id: '' }), false), /Chưa có mã checklist/,
+    'ma rong -> noi ro la chua co, khong in ma rong');
+  /* Ma hop le thi idFromFile khong doi gi. */
+  ok(validateDef(defOf({}), false).def.id === 'test-up', 'ma hop le: idFromFile khong anh huong');
+}
+
+console.log('\nTEST 19 — const van doc duoc sau khi script cua file NEM giua duong');
+{
+  /* Day la ly do file checklist ban cu upload duoc: engine cua no doc localStorage
+     o cuoi script, ma trong iframe sandbox (origin mo) thao tac do nem
+     SecurityError. Hai the <script> classic dung chung global lexical environment
+     nen SECTIONS khai o tren van con.
+
+     vm.runInContext mo phong dung chuyen do — hai lan runInContext tren cung mot
+     context hanh xu nhu hai the <script> cung document. */
+  const vm2 = require('vm');
+  const sb = { JSON, Object, Array, String, Number, Math, Date, Set, isNaN, parseInt };
+  Object.defineProperty(sb, 'localStorage', {
+    get() { const e = new Error('Access is denied for this document.'); e.name = 'SecurityError'; throw e; },
+  });
+  sb.globalThis = sb;
+  const c = vm2.createContext(sb);
+
+  let fileThrew = false;
+  try {
+    vm2.runInContext('const SECTIONS=[{id:"P0",title:"x",items:[{id:"p0-1a",t:"y"}]}];' +
+      'const KEY="wnv-seo-checklist-v1";' +
+      'let state=JSON.parse(localStorage.getItem(KEY)||"{}");', c);
+  } catch { fileThrew = true; }
+  ok(fileThrew, 'script cua file nem khi doc localStorage (giong sandbox that)');
+
+  const raw = vm2.runInContext('({id:(typeof CHECKLIST_ID!=="undefined"?CHECKLIST_ID:null),' +
+    'scores:(typeof SCORES!=="undefined"?SCORES:[]),sections:SECTIONS,title:""})', c);
+  ok(raw.sections.length === 1, 'reporter VAN doc duoc SECTIONS sau khi file nem');
+  ok(raw.id === null, 'khong co CHECKLIST_ID -> tra null cho fallback lo');
+
+  const parsed = validateDef(
+    Object.assign({}, raw, { id: slugFromFilename('webnovel-ngon-tinh-checklist.html') }), false);
+  ok(parsed.def.id === 'webnovel-ngon-tinh-checklist', 'ma lay tu ten file: ' + parsed.def.id);
+  ok(parsed.def.total === 1, 'du lieu hang muc con nguyen');
 }
 
 console.log('\n' + '='.repeat(50));

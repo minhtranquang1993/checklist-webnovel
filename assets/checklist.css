@@ -196,6 +196,24 @@ footer{margin-top:50px;padding-top:18px;border-top:1px solid var(--line);
   border:1px solid var(--line);color:var(--muted)}
 .card .kind.def{border-color:#2b4a6b;color:var(--accent)}
 
+/* nút xoá: nằm ngoài thẻ <a> nên phải định vị tuyệt đối trong wrapper.
+   Ẩn cho tới khi hover/focus để không rủ rê bấm nhầm. */
+.card-wrap{position:relative}
+/* .card giờ là cháu của grid, không còn là con trực tiếp nên grid không kéo cao
+   nó nữa. Không có dòng này thì thẻ mô tả ngắn sẽ thấp hơn thẻ cùng hàng. */
+.card-wrap>.card{height:100%}
+.card-del{position:absolute;top:11px;right:11px;z-index:2;
+  background:transparent;border:1px solid var(--line);color:var(--muted);
+  border-radius:7px;padding:3px 10px;font:inherit;font-size:12px;cursor:pointer;
+  opacity:0;transition:opacity .15s,color .15s,border-color .15s}
+.card-wrap:hover .card-del,.card-del:focus{opacity:1}
+.card-del:hover{color:var(--p0);border-color:var(--p0)}
+/* Chừa chỗ cho nút, chỉ ở thẻ thực sự có nút — tên dài sẽ chạy xuống dòng thay vì
+   nằm dưới nút. */
+.card-wrap:has(.card-del)>.card h3{padding-right:46px}
+/* Trên máy cảm ứng không có hover — hiện mờ sẵn để vẫn bấm được. */
+@media (hover:none){.card-del{opacity:.55}}
+
 @media print{
   body{background:#fff;color:#000}
   .progwrap,.tools,.filters,.idbar{display:none}
