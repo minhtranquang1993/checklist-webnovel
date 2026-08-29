@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checklist</title>
+<link rel="stylesheet" href="assets/checklist.css">
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1 id="pageTitle">Đang tải…</h1>
+  <p class="sub" id="pageSub"></p>
+  <div class="meta" id="pageMeta"></div>
+  <div class="idbar" id="idbar"></div>
+  <div class="needname" id="needname" style="display:none">
+    Chưa nhập tên nên chưa tick được. Nhập tên ở ô phía trên — tên này hiện cạnh mỗi hạng mục bạn tick,
+    để cả team biết ai đã làm việc gì.
+  </div>
+  <div class="scores" id="scores"></div>
+</header>
+
+<div class="progwrap" id="progwrap" hidden>
+  <div class="progtop">
+    <b id="progtxt">0 / 0 hạng mục</b>
+    <span style="color:var(--muted);font-size:13px" id="progpct">0%</span>
+  </div>
+  <div class="progbar"><i id="progbar"></i></div>
+  <div class="filters" id="filters">
+    <div class="tools">
+      <button id="expandAll">Mở hết</button>
+      <button id="collapseAll">Thu hết</button>
+      <button id="reset">Xoá tick</button>
+    </div>
+  </div>
+</div>
+
+<div id="content"></div>
+
+<footer>
+  <p><a href="index.html">← Về danh sách checklist</a></p>
+  <p><b>Cách dùng:</b> nhập tên một lần, click vào dòng để mở hướng dẫn chi tiết, click ô vuông để
+  đánh dấu xong. Tick lưu lên server nên đổi máy vẫn còn, và cả team thấy cùng một tiến độ.
+  Mất mạng vẫn tick được — trang giữ lại và tự đẩy lên khi có mạng, lúc đó chỗ ghi tên sẽ hiện
+  "chưa lưu". Nút <b>Xoá tick</b> bỏ tick cho <b>cả team</b>, không chỉ máy bạn.</p>
+  <p><b>Sửa nội dung checklist này:</b> sửa file HTML ở máy rồi upload lại ở
+  <a href="index.html">trang hub</a> — tick đã có vẫn giữ nguyên.</p>
+</footer>
+</div>
+
+<script src="assets/config.js"></script>
+<script src="assets/sanitize.js"></script>
+<script src="assets/parse-def.js"></script>
+<script>
+/* ============================================================
+   Renderer chung cho checklist dạng `def` (nội dung nằm trong DB).
+   Khác webnovel-vn.html ở chỗ: file đó khai SCORES/SECTIONS ngay trong trang,
+   còn trang này đọc từ bảng `checklist_defs` theo `?id=` rồi mới nạp sync.js.
+
+   TOÀN BỘ phải nằm trong IIFE. sync.js khai top-level `const REST, RPC, HDRS,
+   NAME_KEY, esc, $, state, queue…` — trùng tên với bất cứ khai báo nào ở đây là
+   SyntaxError, chết cả trang. Chỉ ba biến CHECKLIST_ID / SCORES / SECTIONS được
+   đưa ra global, vì sync.js đọc chúng.
+   ============================================================ */
+(function () {
+  'use strict';
+
+  const el = id => document.getElementById(id);
+  const escText = (node, s) => { node.textContent = String(s == null ? '' : s); };
+
+  function fail(msg, detail) {
+    escText(el('pageTitle'), 'Không mở được checklist');
+    escText(el('pageSub'), msg);
+    el('idbar').innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'needname';
+    box.textContent = detail || 'Kiểm tra lại link, hoặc quay về trang hub để chọn checklist.';
+    el('content').appendChild(box);
+    document.title = 'Không mở được checklist';
+  }
+
+  const id = new URLSearchParams(location.search).get('id') || '';
+  if (!id) {
+    return fail('Link thiếu mã checklist.',
+      'Link phải có dạng checklist.html?id=ma-checklist. Về trang hub và bấm vào thẻ checklist.');
+  }
+  if (!DEF_ID_RE.test(id)) {
+    return fail(`Mã checklist "${id.slice(0, 60)}" sai định dạng.`,
+      'Mã chỉ gồm chữ thường, số và gạch ngang.');
+  }
+
+  /* Nút filter sinh từ dữ liệu, không hardcode P0/P1/… như webnovel-vn.html.
+     applyFilter() trong sync.js so `data-f` với `item.dataset.p` nên chỉ cần
+     đúng thuộc tính đó là chạy. Chèn TRƯỚC .tools để hai nút Mở/Thu vẫn ở cuối. */
+  function buildFilters(sections) {
+    const bar = el('filters');
+    const tools = bar.querySelector('.tools');
+    const add = (f, label, on) => {
+      const b = document.createElement('button');
+      b.dataset.f = f;
+      b.textContent = label;
+      if (on) b.className = 'on';
+      bar.insertBefore(b, tools);
+    };
+    add('all', 'Tất cả', true);
+    sections.forEach(s => add(s.id, s.title.length > 22 ? s.id : s.title));
+    add('todo', 'Chưa xong');
+  }
+
+  function paintHeader(def, row) {
+    const title = (def.meta && def.meta.title) || row.name || id;
+    escText(el('pageTitle'), title);
+    document.title = title;
+    escText(el('pageSub'), row.descr ||
+      'Bản làm việc kèm hướng dẫn từng bước. Tick xong lưu lên server — cả team thấy chung.');
+
+    const chips = [
+      `${def.total} hạng mục`,
+      `${def.sections.length} nhóm`,
+    ];
+    if (row.updated_by) chips.push(`Nội dung do ${row.updated_by} upload`);
+    if (row.updated_at) {
+      const d = new Date(row.updated_at);
+      if (!isNaN(d)) {
+        const p = n => String(n).padStart(2, '0');
+        chips.push(`Cập nhật ${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`);
+      }
+    }
+    el('pageMeta').innerHTML = '';
+    chips.forEach(c => {
+      const s = document.createElement('span');
+      s.className = 'chip';
+      s.textContent = c;
+      el('pageMeta').appendChild(s);
+    });
+  }
+
+  const REST_DEFS = SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1';
+
+  (async function boot() {
+    let defRow, metaRow;
+    try {
+      /* Hai request song song thay vì một request có embed `checklists(...)`:
+         embed phụ thuộc vào việc PostgREST nhận ra khoá ngoại, còn cách này thì
+         không — và nó khớp với cách hub.js đang làm. */
+      const q = `id=eq.${encodeURIComponent(id)}`;
+      const [resDef, resMeta] = await Promise.all([
+        fetch(`${REST_DEFS}/checklist_defs?select=id,scores,sections,meta,updated_by,updated_at&${q}`,
+          { headers: SB_HEADERS, cache: 'no-store' }),
+        fetch(`${REST_DEFS}/checklists?select=id,name,descr,kind&${q}`,
+          { headers: SB_HEADERS, cache: 'no-store' }),
+      ]);
+      if (!resDef.ok) throw new Error('HTTP ' + resDef.status);
+      if (!resMeta.ok) throw new Error('HTTP ' + resMeta.status);
+      const [defs, metas] = await Promise.all([resDef.json(), resMeta.json()]);
+      defRow = Array.isArray(defs) ? defs[0] : null;
+      metaRow = (Array.isArray(metas) ? metas[0] : null) || {};
+    } catch (err) {
+      return fail('Không tải được nội dung từ server.',
+        'Kiểm tra mạng rồi tải lại trang. Nếu vẫn lỗi, nội dung có thể chưa được upload.');
+    }
+
+    if (!defRow) {
+      return fail(`Không có checklist nào mang mã "${id}".`,
+        metaRow.kind === 'file'
+          ? `Mã này thuộc checklist dạng file (${metaRow.name || id}) — mở nó từ trang hub, không qua link này.`
+          : 'Có thể nó chưa được upload. Về trang hub và upload file HTML tương ứng.');
+    }
+
+    /* Lọc lại ở client dù dữ liệu đến từ DB của mình: bảng này chứa HTML do người
+       dùng upload, và trang là public nên ai cũng upload được. Không tin DB thay
+       cho việc lọc. */
+    let parsed;
+    try {
+      parsed = validateDef({
+        id: defRow.id,
+        scores: defRow.scores,
+        sections: defRow.sections,
+        title: (defRow.meta && defRow.meta.title) || metaRow.name || '',
+      });
+    } catch (err) {
+      return fail('Nội dung checklist không hợp lệ.', err.message);
+    }
+
+    const def = parsed.def;
+    paintHeader(def, {
+      name: metaRow.name || '',
+      descr: metaRow.descr || '',
+      updated_by: defRow.updated_by || '',
+      updated_at: defRow.updated_at || '',
+    });
+    buildFilters(def.sections);
+    el('progwrap').hidden = false;
+
+    /* Ba biến sync.js cần. Gán trước khi nạp nó, và chỉ nạp MỘT lần. */
+    window.CHECKLIST_ID = def.id;
+    window.SCORES = def.scores;
+    window.SECTIONS = def.sections;
+
+    const s = document.createElement('script');
+    s.src = 'assets/sync.js';
+    document.body.appendChild(s);
+  })();
+})();
+</script>
+</body>
+</html>

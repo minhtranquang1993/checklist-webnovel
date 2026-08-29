@@ -4,8 +4,12 @@
    Danh sách đọc từ bảng `checklists` trên Supabase, không hardcode trong repo,
    nên thêm checklist mới không cần sửa file nào.
 
-   Nút "+ Thêm checklist" chỉ ĐĂNG KÝ một file HTML đã có trong repo. Trang static
-   không ghi được file vào repo — file phải được push lên trước.
+   Hai loại checklist, phân biệt bằng cột `kind`:
+     'file' — nội dung nằm trong một file .html trong repo, thẻ trỏ thẳng vào file
+              đó. Thêm bằng nút "+ Đăng ký file trong repo" (file phải push trước).
+     'def'  — nội dung nằm trong bảng `checklist_defs`, thẻ trỏ vào
+              checklist.html?id=<id>. Thêm bằng nút "⬆ Upload file HTML", không
+              cần push repo.
    ============================================================ */
 'use strict';
 
@@ -50,6 +54,15 @@ function askName() {
 
 $('btnName').onclick = askName;
 /* ---------- vẽ thẻ ---------- */
+/* href là thứ duy nhất do dữ liệu quyết định. Với 'file' nó là tên file trong repo
+   (đã qua FILE_RE), với 'def' nó là checklist.html?id=<id> (id đã qua ID_RE). Hai
+   regex đó là lý do không nhét được `../` hay URL ngoài vào đây. */
+function hrefOf(c) {
+  return c.kind === 'def'
+    ? 'checklist.html?id=' + encodeURIComponent(c.id)
+    : esc(c.file);
+}
+
 function card(c, stat) {
   const done = stat ? stat.done : 0;
   const total = c.total || 0;
@@ -61,9 +74,12 @@ function card(c, stat) {
   const count = total
     ? `<span><b>${done}</b> / ${total} hạng mục</span><span style="color:${col}">${pct}%</span>`
     : `<span><b>${done}</b> hạng mục đã tick</span><span style="color:var(--muted)">—</span>`;
+  const kind = c.kind === 'def'
+    ? '<span class="kind def" title="Nội dung lưu trên server — sửa bằng cách upload lại file">upload</span>'
+    : '<span class="kind" title="Nội dung nằm trong file HTML trong repo">repo</span>';
 
-  return `<a class="card" href="${esc(c.file)}">
-    <h3>${esc(c.name)}</h3>
+  return `<a class="card" href="${hrefOf(c)}">
+    <h3>${esc(c.name)}${kind}</h3>
     <p class="desc">${esc(c.descr || '')}</p>
     <div class="num">${count}</div>
     <div class="bar"><i style="width:${pct}%;background:${col}"></i></div>
@@ -74,7 +90,7 @@ function card(c, stat) {
 function paint(list, stats) {
   if (!list.length) {
     $('hub').innerHTML =
-      '<p class="empty">Chưa có checklist nào. Bấm <b>+ Thêm checklist</b> để đăng ký một file HTML đã có trong repo.</p>';
+      '<p class="empty">Chưa có checklist nào. Bấm <b>⬆ Upload file HTML</b> để thêm một checklist từ file ở máy.</p>';
     return;
   }
   $('hub').innerHTML = list.map(c => card(c, stats[c.id])).join('');
@@ -86,7 +102,7 @@ let checklists = [];
 async function load() {
   try {
     const [resList, resProg] = await Promise.all([
-      fetch(`${REST}/checklists?select=id,name,file,descr,total&order=created_at`,
+      fetch(`${REST}/checklists?select=id,name,file,descr,total,kind&order=created_at`,
         { headers: SB_HEADERS, cache: 'no-store' }),
       fetch(`${REST}/checklist_progress?select=checklist_id,done,updated_by,updated_at&done=is.true`,
         { headers: SB_HEADERS, cache: 'no-store' }),
@@ -98,9 +114,14 @@ async function load() {
     const rows = await resProg.json();
     if (!Array.isArray(list) || !Array.isArray(rows)) throw new Error('phản hồi không hợp lệ');
 
-    /* Chỉ hiện checklist có tên file hợp lệ. `file` là thứ duy nhất đi vào href,
-       và nó do người dùng nhập, nên kiểm lại ở client chứ không chỉ tin DB. */
-    checklists = list.filter(c => c.file && FILE_RE.test(c.file));
+    /* Chỉ hiện checklist mà mình dựng được href an toàn cho nó. Kiểm lại ở client
+       chứ không chỉ tin DB, vì href là thứ duy nhất do dữ liệu người dùng quyết định:
+         'def'  → id phải sạch (nó đi vào ?id=)
+         'file' → tên file phải sạch (nó đi vào href)
+       Row thiếu `kind` (DB chưa chạy schema mới) được coi là 'file' như trước. */
+    checklists = list.filter(c => (c.kind === 'def'
+      ? ID_RE.test(String(c.id || ''))
+      : c.file && FILE_RE.test(c.file)));
 
     const stats = {};
     rows.forEach(r => {
@@ -115,7 +136,7 @@ async function load() {
     setStatus('err', 'Không tải được danh sách — thử tải lại trang');
   }
 }
-/* ---------- form thêm checklist ---------- */
+/* ---------- form đăng ký file trong repo (cách cũ) ---------- */
 function msg(kind, text) {
   const el = $('fMsg');
   el.className = 'fmsg ' + kind;
@@ -132,6 +153,7 @@ $('fFile').oninput = () => {
 };
 
 function openForm() {
+  closeUpload();                              // hai form không mở cùng lúc
   $('addbox').hidden = false;
   msg('', '');
   $('fFile').focus();
@@ -228,6 +250,165 @@ $('btnSave').onclick = save;
 $('addbox').addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); save(); }
   if (e.key === 'Escape') closeForm();
+});
+
+/* ---------- form upload file HTML ---------- */
+/* Khác form trên ở chỗ căn bản: form trên chỉ trỏ tới một file đã có trong repo,
+   form này ĐỌC file ở máy rồi lưu nội dung lên server. Nhờ vậy không phải push repo
+   và không phải chờ Vercel deploy.
+
+   Nội dung được bóc trong iframe sandbox và lọc bằng sanitizeHtml — xem
+   assets/parse-def.js. Ở đây chỉ lo phần giao diện và gọi RPC. */
+function uMsg(kind, text) {
+  const el = $('uMsg');
+  el.className = 'fmsg ' + kind;
+  el.textContent = text;
+}
+
+/* def của file vừa chọn, đã validate + sanitize. null = chưa có gì để upload. */
+let pending = null;
+
+function setInfo(html, warn) {
+  const box = $('uInfo');
+  box.hidden = !html;
+  box.className = 'upinfo' + (warn ? ' warn' : '');
+  box.innerHTML = html || '';
+}
+
+function closeUpload() {
+  $('upbox').hidden = true;
+  $('uFile').value = '';
+  $('uName').value = '';
+  $('uDescr').value = '';
+  pending = null;
+  $('btnUpSave').disabled = true;
+  setInfo('');
+  uMsg('', '');
+}
+
+function openUpload() {
+  closeForm();                                // hai form không mở cùng lúc
+  $('upbox').hidden = false;
+  uMsg('', '');
+  $('uFile').focus();
+}
+
+$('btnUpload').onclick = () => ($('upbox').hidden ? openUpload() : closeUpload());
+$('btnUpCancel').onclick = closeUpload;
+
+/* Chọn file → đọc → bóc → validate → hiện tóm tắt. Chưa gửi gì lên server ở bước
+   này, để người dùng thấy trước cái mình sắp upload. */
+$('uFile').onchange = async () => {
+  const f = $('uFile').files && $('uFile').files[0];
+  pending = null;
+  $('btnUpSave').disabled = true;
+  setInfo('');
+  if (!f) return uMsg('', '');
+
+  if (f.size > 3 * 1024 * 1024) {
+    return uMsg('err', `File ${Math.round(f.size / 1024)}KB — quá lớn (tối đa 3MB).`);
+  }
+
+  uMsg('', `Đang đọc ${f.name}…`);
+  try {
+    const parsed = await parseChecklistFile(await f.text());
+    pending = parsed.def;
+
+    /* Trùng mã với checklist đang có: nói rõ chuyện gì sẽ xảy ra, vì hai trường hợp
+       khác nhau hoàn toàn — một cái là cập nhật, một cái là bị chặn. */
+    const clash = checklists.find(c => c.id === pending.id);
+    let warn = false;
+    let extra = '';
+    if (clash && clash.kind === 'def') {
+      warn = true;
+      extra = `<br><span class="k">Mã này đã có</span> — upload sẽ <b>cập nhật nội dung</b> của
+        "${esc(clash.name)}". Tick đã có vẫn giữ nguyên.`;
+    } else if (clash) {
+      warn = true;
+      extra = `<br><span class="k">Mã này đang thuộc file trong repo</span>
+        (<b>${esc(clash.file || '')}</b>) — server sẽ <b>từ chối</b>. Đổi
+        <code>CHECKLIST_ID</code> trong file thành mã khác.`;
+    }
+
+    const warns = parsed.warnings.length
+      ? '<ul>' + parsed.warnings.map(w => `<li>${esc(w)}</li>`).join('') + '</ul>'
+      : '';
+
+    setInfo(
+      `<span class="k">Mã checklist:</span> <b>${esc(pending.id)}</b> ·
+       <b>${pending.sections.length}</b> nhóm ·
+       <b>${pending.total}</b> hạng mục${extra}${warns}`,
+      warn || parsed.warnings.length > 0
+    );
+
+    if (!$('uName').value.trim()) {
+      $('uName').value = (pending.meta.title || pending.id).slice(0, 80);
+    }
+    $('btnUpSave').disabled = false;
+    uMsg('ok', 'Đọc xong — kiểm lại rồi bấm Upload.');
+  } catch (err) {
+    uMsg('err', err.message);
+  }
+};
+
+async function upload(force) {
+  if (!pending) return uMsg('err', 'Chọn file HTML trước.');
+  if (!userName && !askName()) return;
+
+  const name = $('uName').value.trim();
+  if (!name) return uMsg('err', 'Nhập tên hiển thị.');
+
+  $('btnUpSave').disabled = true;
+  try {
+    uMsg('', 'Đang upload…');
+    const res = await fetch(`${REST}/rpc/upload_checklist_def`, {
+      method: 'POST',
+      headers: SB_HEADERS,
+      body: JSON.stringify({
+        p_id: pending.id,
+        p_name: name,
+        p_descr: $('uDescr').value.trim(),
+        p_scores: pending.scores,
+        p_sections: pending.sections,
+        p_meta: pending.meta,
+        p_total: pending.total,
+        p_by: userName,
+        p_force: !!force,
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      let m2 = '';
+      try { m2 = JSON.parse(body).message || ''; } catch { m2 = body.slice(0, 300); }
+
+      /* Server chặn vì bản mới thiếu hạng mục ĐÃ ĐƯỢC TICK. Đây là chỗ duy nhất
+         hỏi lại người dùng: mất tick là việc không hoàn tác được từ trang này, nên
+         không tự ý force, cũng không im lặng bỏ qua. */
+      if (!force && /DA DUOC TICK/.test(m2)) {
+        if (confirm(m2 + '\n\nVẫn upload và bỏ những tick đó?')) return upload(true);
+        uMsg('err', 'Đã huỷ — không có gì thay đổi trên server.');
+        return;
+      }
+      throw new Error(m2 || 'HTTP ' + res.status);
+    }
+
+    const rows = await res.json().catch(() => []);
+    const created = Array.isArray(rows) && rows[0] ? rows[0].out_created : true;
+    closeUpload();
+    setStatus('load', 'Đang tải lại…');
+    await load();
+    setStatus('ok', created ? 'Đã thêm checklist mới' : 'Đã cập nhật nội dung checklist');
+  } catch (err) {
+    uMsg('err', err.message);
+  } finally {
+    $('btnUpSave').disabled = !pending;
+  }
+}
+
+$('btnUpSave').onclick = () => upload(false);
+$('upbox').addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeUpload();
 });
 
 /* ---------- khởi động ---------- */

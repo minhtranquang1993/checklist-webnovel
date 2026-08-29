@@ -17,12 +17,38 @@
     <button class="ghost" id="btnName">Đổi tên</button>
     <span class="sp"></span>
     <span class="status load" id="status"><span class="dot"></span>Đang tải tiến độ…</span>
-    <button id="btnAdd">+ Thêm checklist</button>
+    <button id="btnUpload">⬆ Upload file HTML</button>
+    <button class="ghost" id="btnAdd">+ Đăng ký file trong repo</button>
   </div>
 </header>
 
+<div class="addbox" id="upbox" hidden>
+  <h3>Upload file HTML làm checklist mới</h3>
+  <p class="hint">Chọn file <code>.html</code> ở máy — nội dung hạng mục được đọc ra và lưu lên
+  server, <b>không cần push repo, không cần chờ deploy</b>. Copy <code>webnovel-vn.html</code> rồi
+  sửa <code>CHECKLIST_ID</code>, <code>SCORES</code>, <code>SECTIONS</code> là dùng được.</p>
+  <div class="frow">
+    <label>File HTML <span class="req">*</span>
+      <input type="file" id="uFile" accept=".html,.htm,text/html">
+      <em>Mã checklist lấy từ <code>CHECKLIST_ID</code> khai trong file.</em>
+    </label>
+    <label>Tên hiển thị <span class="req">*</span>
+      <input type="text" id="uName" placeholder="tự lấy từ &lt;title&gt; của file" maxlength="80" autocomplete="off">
+    </label>
+  </div>
+  <label class="full">Mô tả ngắn
+    <input type="text" id="uDescr" placeholder="SEO on-page + schema cho website bệnh viện." maxlength="300" autocomplete="off">
+  </label>
+  <div class="upinfo" id="uInfo" hidden></div>
+  <div class="fmsg" id="uMsg"></div>
+  <div class="factions">
+    <button id="btnUpSave" disabled>Upload</button>
+    <button class="ghost" id="btnUpCancel">Huỷ</button>
+  </div>
+</div>
+
 <div class="addbox" id="addbox" hidden>
-  <h3>Thêm checklist đã có trong repo</h3>
+  <h3>Đăng ký checklist đã có trong repo</h3>
   <p class="hint">File HTML phải đã nằm ở gốc repo (đã push lên GitHub). Form này chỉ đăng ký nó
   để hiện ở đây và cho phép ghi tick — nó không tạo ra file.</p>
   <div class="frow">
@@ -59,13 +85,17 @@
 <footer>
   <p><b>Cách dùng:</b> mở checklist, nhập tên một lần, rồi tick. Tên hiện cạnh mỗi hạng mục để cả
   team biết ai đã làm việc gì. Số % ở đây đọc trực tiếp từ server, không phải từ máy bạn.</p>
-  <p><b>Thêm checklist mới:</b> tạo file HTML ở máy (copy một file có sẵn, sửa
-  <code>CHECKLIST_ID</code> và dữ liệu hạng mục), push lên GitHub, rồi bấm
-  <b>+ Thêm checklist</b> ở trên. Xem <code>README.md</code>.</p>
+  <p><b>Thêm checklist mới:</b> copy <code>webnovel-vn.html</code> ở máy, sửa
+  <code>CHECKLIST_ID</code> và dữ liệu hạng mục, rồi bấm <b>⬆ Upload file HTML</b> ở trên. Không cần
+  push repo. Muốn sửa nội dung về sau thì upload lại chính file đó — tick đã có vẫn giữ nguyên.</p>
+  <p><b>+ Đăng ký file trong repo</b> là cách cũ, dành cho file đã push lên GitHub và tự render lấy
+  (như <code>webnovel-vn.html</code>). Xem <code>README.md</code>.</p>
 </footer>
 </div>
 
 <script src="assets/config.js"></script>
+<script src="assets/sanitize.js"></script>
+<script src="assets/parse-def.js"></script>
 <script src="assets/hub.js"></script>
 </body>
 </html>

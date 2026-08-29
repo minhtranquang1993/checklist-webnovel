@@ -174,6 +174,28 @@ footer{margin-top:50px;padding-top:18px;border-top:1px solid var(--line);
 .factions button.ghost:hover{color:var(--text);border-color:var(--accent)}
 .factions button:disabled{opacity:.5;cursor:default}
 
+/* form upload — dùng lại .addbox, chỉ thêm phần input file + hộp preview */
+.addbox input[type=file]{display:block;width:100%;margin-top:5px;background:var(--panel2);
+  border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 11px;
+  font:inherit;font-size:13px;cursor:pointer}
+.addbox input[type=file]:focus{outline:none;border-color:var(--accent)}
+.addbox input[type=file]::file-selector-button{background:var(--panel);border:1px solid var(--line);
+  color:var(--text);border-radius:6px;padding:4px 11px;margin-right:10px;font:inherit;
+  font-size:12.5px;cursor:pointer}
+.upinfo{background:var(--panel2);border:1px solid var(--line);border-radius:9px;
+  padding:11px 13px;margin:4px 0 12px;font-size:13px}
+.upinfo b{color:var(--text)}
+.upinfo .k{color:var(--muted)}
+.upinfo ul{margin:7px 0 0;padding-left:19px;color:var(--p1);font-size:12.5px}
+.upinfo li{margin:3px 0}
+.upinfo.warn{border-color:#5c4318;background:#241d13}
+
+/* chip phân biệt hai loại checklist trên thẻ ở hub */
+.card .kind{display:inline-block;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;
+  font-weight:700;border-radius:5px;padding:2px 7px;margin-left:8px;vertical-align:2px;
+  border:1px solid var(--line);color:var(--muted)}
+.card .kind.def{border-color:#2b4a6b;color:var(--accent)}
+
 @media print{
   body{background:#fff;color:#000}
   .progwrap,.tools,.filters,.idbar{display:none}

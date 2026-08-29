@@ -4,7 +4,8 @@
 Danh sách checklist nằm trên Supabase (bảng `checklists`), không nằm trong repo,
 nên script này không đối chiếu với config nữa. Nó kiểm những thứ chỉ đọc file mới biết:
 
-  1. Mỗi file .html ở gốc repo (trừ index.html) phải khai `const CHECKLIST_ID`.
+  1. Mỗi file .html ở gốc repo (trừ các file trong NOT_CHECKLIST) phải khai
+     `const CHECKLIST_ID`.
   2. `CHECKLIST_ID` phải đúng định dạng và không trùng giữa các file — hai file cùng
      mã sẽ ghi tick chồng lên nhau trong DB.
   3. Không có item_id trùng nhau trong cùng một file.
@@ -12,6 +13,11 @@ nên script này không đối chiếu với config nữa. Nó kiểm những th
      `tick_item` sẽ từ chối và nhân viên không tick được hạng mục đó.
   5. Item id là append-only: không hạng mục nào bị xoá hay đổi tên so với
      tools/item-ids.json. Đổi id là mất tick của hạng mục đó trong DB.
+
+Script này chỉ gác checklist dạng **file** (nội dung nằm trong repo). Checklist dạng
+**def** (upload từ trang hub, nội dung nằm trong bảng `checklist_defs`) không có file
+trong repo để kiểm — nó được gác bởi `upload_checklist_def()` trong schema.sql, và
+chặt hơn: hàm đó từ chối bản upload nào làm mất tick của hạng mục ĐÃ ĐƯỢC TICK.
 
 Số hạng mục không cần khai ở đâu cả — trang checklist tự báo lại cho DB khi mở.
 
@@ -30,7 +36,10 @@ ROOT = Path(__file__).resolve().parent.parent
 SNAPSHOT = Path(__file__).resolve().parent / 'item-ids.json'
 
 # Không phải file checklist.
-NOT_CHECKLIST = {'index.html'}
+#   index.html     — trang hub
+#   checklist.html — renderer chung cho checklist dạng def; nó ĐỌC CHECKLIST_ID từ
+#                    DB lúc chạy nên cố tình không khai biến đó trong file.
+NOT_CHECKLIST = {'index.html', 'checklist.html'}
 
 # Hạng mục và section trông giống nhau (`{id:"..."`), khác ở chỗ section có `tag:`
 # ngay sau id. Loại section ra bằng lookahead, thay vì dựa vào khoảng trắng —

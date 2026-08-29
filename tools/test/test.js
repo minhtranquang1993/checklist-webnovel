@@ -237,6 +237,128 @@ console.log('\nTEST 12 — writeAt/confirmedAt chi nhan id hop le, khong phinh v
 }
 
 console.log('\n' + '='.repeat(50));
+console.log('PHAN 2 — sanitize.js + parse-def.js (checklist upload tu trang hub)');
+
+/* Node khong co DOMParser. tools/test/dom-shim.js la ban tu viet vua du cho
+   sanitize.js (repo khong co dependency). Gan vao global TRUOC khi require
+   sanitize.js, vi module do doc `typeof DOMParser` luc chay ham. */
+global.DOMParser = require('./dom-shim.js').DOMParser;
+const { sanitizeHtml } = require('../../assets/sanitize.js');
+const { validateDef, extractInlineScript } = require('../../assets/parse-def.js');
+
+/* Def toi thieu, hop le. Moi test sua mot cho de kiem dung mot luat. */
+const defOf = over => Object.assign({
+  id: 'test-up',
+  scores: [['Crawlability', 7, 'ghi chu']],
+  sections: [{
+    id: 'P0', tag: 't-p0', title: 'Nhom mot', note: 'ghi chu nhom',
+    items: [{ id: 'p0-1a', t: 'Viec mot', e: '1h', w: 'ly do', b: '<b>huong dan</b>' }],
+  }],
+}, over);
+
+const throws = (fn, re, label) => {
+  try { fn(); ok(false, label + ' (khong nem loi)'); } catch (e) {
+    ok(re.test(e.message), label + ': ' + e.message.slice(0, 90));
+  }
+};
+
+console.log('\nTEST 13 — sanitize: bo script/style/on*/javascript: nhung GIU chu va dinh dang');
+{
+  const s = sanitizeHtml;
+  ok(s('<b>giu</b>') === '<b>giu</b>', 'giu <b>');
+  ok(s('<script>alert(1)</script>sau') === 'sau', 'xoa <script> ca noi dung');
+  ok(s('<style>p{}</style>sau') === 'sau', 'xoa <style> ca noi dung');
+  ok(s('<iframe src="x"></iframe>sau') === 'sau', 'xoa <iframe>');
+  ok(s('<img src=x onerror=alert(1)>') === '', 'xoa <img> (duong gui request ra ngoai)');
+  ok(s('<p onclick="evil()">t</p>') === '<p>t</p>', 'bo onclick, giu <p>');
+  ok(s('<div style="color:red">t</div>') === '<div>t</div>', 'bo style attr');
+  ok(s('<!-- x -->text') === 'text', 'xoa comment');
+  ok(s('<div class="callout good"><b>ok</b></div>') === '<div class="callout good"><b>ok</b></div>',
+     'giu class (style trang dua vao no)');
+  ok(s('<marquee>chu</marquee>') === 'chu', 'tag ngoai whitelist: bo the, GIU chu');
+  ok(s('<h1>Tieu de</h1>') === 'Tieu de', 'h1 bi unwrap (trung cap voi tieu de trang)');
+  ok(s('<a href="javascript:alert(1)">x</a>') === '<a>x</a>', 'bo href javascript:');
+  ok(s('<a href="  javascript:alert(1)">x</a>') === '<a>x</a>', 'bo href javascript: co khoang trang');
+  ok(s('<a href="data:text/html,x">x</a>') === '<a>x</a>', 'bo href data:');
+  ok(/target="_blank"/.test(s('<a href="https://a.com">x</a>')), 'link http duoc mo tab moi');
+  ok(/rel="noopener noreferrer"/.test(s('<a href="https://a.com">x</a>')), 'link http co noopener');
+  ok(s('<td colspan="2">c</td>') === '<td colspan="2">c</td>', 'giu colspan hop le');
+  ok(s('<td colspan="abc">c</td>') === '<td>c</td>', 'bo colspan khong phai so');
+  ok(s('') === '' && s(null) === '' && s(undefined) === '', 'rong/null tra ve rong');
+
+  /* Cho de bao dong gia: webnovel-vn.html co doan huong dan in ra the <link
+     onload=...> BEN TRONG <pre><code>, da escape thanh &lt;link. Do la CHU, khong
+     phai attribute — sanitize phai giu nguyen chu do, khong duoc coi la handler. */
+  const inCode = s('<pre><code>&lt;link rel="preload" onload="x()"&gt;</code></pre>');
+  ok(!/<link/i.test(inCode), 'chu &lt;link&gt; trong <code> khong thanh the that');
+  ok(!/<[a-z]+[^>]* onload=/i.test(inCode), 'onload trong <code> chi la chu, khong phai handler');
+  ok(/&lt;link/.test(inCode), 'giu nguyen doan huong dan de doc');
+}
+
+console.log('\nTEST 14 — extractInlineScript: chi lay khoi khai CHECKLIST_ID, bo qua <script src>');
+{
+  const html = '<script src="assets/sync.js"></script>' +
+    '<script>var x=1;</script>' +
+    '<script>\nconst CHECKLIST_ID = "abc";\nconst SECTIONS=[];\n</script>';
+  const code = extractInlineScript(html);
+  ok(/CHECKLIST_ID/.test(code), 'lay dung khoi co CHECKLIST_ID');
+  ok(!/sync\.js/.test(code) && !/var x=1/.test(code), 'khong lay khoi khac, khong lay <script src>');
+  ok(extractInlineScript('<script src="a.js"></script>') === '', 'file khong co khoi nao -> rong');
+}
+
+console.log('\nTEST 15 — validateDef: def hop le -> dem dung, HTML da duoc loc');
+{
+  const r = validateDef(defOf({
+    sections: [{
+      id: 'P0', tag: 't-p0', title: 'Nhom mot',
+      note: 'ghi chu <script>alert(1)</script>',
+      items: [
+        { id: 'p0-1a', t: 'Viec mot', b: '<div class="callout good"><b>ok</b></div>' },
+        { id: 'p0-1b', t: 'Viec hai', b: '<p onclick="x()">t</p>' },
+      ],
+    }],
+  }));
+  ok(r.def.total === 2, 'dem dung so hang muc: ' + r.def.total);
+  ok(r.def.sections[0].note === 'ghi chu ', 'note cua NHOM cung duoc loc (cho de bo sot)');
+  ok(r.def.sections[0].items[0].b === '<div class="callout good"><b>ok</b></div>', 'body giu dinh dang');
+  ok(r.def.sections[0].items[1].b === '<p>t</p>', 'body bi bo onclick');
+  ok(r.warnings.length === 0, 'khong co canh bao voi def sach');
+}
+
+console.log('\nTEST 16 — validateDef: chan cac loi lam mat tick hoac lam DB tu choi');
+{
+  throws(() => validateDef(defOf({ id: 'Test_Up' })), /sai định dạng/, 'CHECKLIST_ID chu hoa/gach duoi');
+  throws(() => validateDef(defOf({ id: '' })), /sai định dạng/, 'CHECKLIST_ID rong');
+  throws(() => validateDef(defOf({ sections: [] })), /không được rỗng/, 'SECTIONS rong');
+  throws(() => validateDef(defOf({ sections: 'x' })), /phải là mảng/, 'SECTIONS khong phai mang');
+  throws(() => validateDef(defOf({
+    sections: [{ id: 'P0', title: 'x', items: [] }],
+  })), /không có hạng mục/, 'nhom khong co hang muc');
+  throws(() => validateDef(defOf({
+    sections: [{ id: 'P0', title: 'x', items: [{ id: 'AB_1', t: 'x' }] }],
+  })), /sai định dạng/, 'item id sai dinh dang (DB se tu choi tick)');
+  throws(() => validateDef(defOf({
+    sections: [{ id: 'P0', title: 'x', items: [{ id: 'p0-1a', t: 'x' }, { id: 'p0-1a', t: 'y' }] }],
+  })), /hai hạng mục/, 'item id trung -> tick ghi chong len nhau');
+  throws(() => validateDef(defOf({
+    sections: [{ id: 'P0', title: 'x', items: [{ id: 'p0-1a', t: '  ' }] }],
+  })), /thiếu tiêu đề/, 'item thieu tieu de');
+  throws(() => validateDef(null), /rỗng/, 'du lieu rong');
+}
+
+console.log('\nTEST 17 — validateDef: SCORES meo thi canh bao, KHONG chan ca file');
+{
+  const r = validateDef(defOf({ scores: [['Tot', 8, 'ok'], ['Thieu diem'], 'khong phai mang'] }));
+  ok(r.def.scores.length === 1, 'chi giu dong dung dang: ' + r.def.scores.length);
+  ok(r.warnings.length === 1, 'co canh bao thay vi nem loi');
+  const r2 = validateDef(defOf({ scores: 'x' }));
+  ok(r2.def.scores.length === 0 && r2.warnings.length === 1, 'SCORES khong phai mang -> bo + canh bao');
+  const r3 = validateDef(defOf({ scores: [['Qua cao', 99, '']] }));
+  ok(r3.def.scores[0][1] === 10, 'diem bi ep vao 0-10: ' + r3.def.scores[0][1]);
+}
+
+console.log('\n' + '='.repeat(50));
 console.log(`PASS ${pass} · FAIL ${fail}`);
+if (fail) console.log('LUU Y: sanitize.js duoc test bang DOM tu viet (tools/test/dom-shim.js).');
 process.exit(fail ? 1 : 0);
 })();
