@@ -45,14 +45,14 @@ assets/config.js      URL + anon key (không chứa danh sách checklist)
 assets/hub.js         Logic trang hub: đọc danh sách, tính %, upload, đăng ký
 assets/sync.js        Engine checklist: render, ghi tick, hàng đợi offline
 assets/sanitize.js    Lọc HTML người dùng upload (whitelist tag/attribute)
-assets/parse-def.js   Bóc SCORES/SECTIONS từ file HTML, suy mã từ tên file, kiểm cấu trúc
+assets/parse-def.js   Bóc dữ liệu checklist từ file HTML (khai SECTIONS, hoặc đọc cấu trúc), kiểm cấu trúc
 assets/checklist.css  Style dùng chung
 schema.sql            Tạo lại toàn bộ DB (chạy lại nhiều lần được)
 seed.sql              17 hạng mục đã xong trước 27/08/2026 (chạy một lần)
 tools/verify.py       Kiểm các file checklist HTML trước khi push
 tools/item-ids.json   Ảnh chụp item id — chặn việc đổi/xoá id làm mất tick
-tools/test/           90 test (chạy bằng node, không cần cài gì)
-tools/test/dom-shim.js  DOMParser tối giản để test sanitize.js trong node
+tools/test/           123 test (chạy bằng node, không cần cài gì)
+tools/test/dom-shim.js  DOM tối giản (DOMParser + template) để test bằng node
 ```
 
 Danh sách checklist **không nằm trong repo** — nó ở bảng `checklists` trên Supabase. Vì vậy thêm
@@ -74,25 +74,57 @@ Tick của cả hai loại nằm chung ở `checklist_progress` và dùng cùng 
 
 ## Upload file HTML (cách nhanh, không cần push repo)
 
-1. Copy `webnovel-vn.html` thành file mới ở máy. Sửa `SCORES` và `SECTIONS` (dữ liệu hạng mục) và
-   `<title>` (dùng làm gợi ý cho tên hiển thị). **Không cần khai `CHECKLIST_ID`** — xem dưới.
+1. Có file checklist `.html` ở máy — một trong hai dạng ở mục dưới.
 2. Mở trang hub → **⬆ Upload file HTML** → chọn file. Trang hiện luôn mã, số nhóm, số hạng mục
    đọc được để anh đối chiếu trước khi gửi.
 3. Bấm **Upload**. Xong — thẻ mới hiện ngay, không cần push repo, không cần chờ deploy.
 
-Thứ **bắt buộc** phải có trong file là `SECTIONS`. `CHECKLIST_ID` thì tuỳ:
+### Hai dạng file được nhận
+
+**Dạng 1 — file khai dữ liệu** (khuôn của `webnovel-vn.html`): một thẻ `<script>` inline khai
+`const SECTIONS` (và `SCORES` nếu muốn có bảng điểm). Copy `webnovel-vn.html` rồi sửa dữ liệu hạng
+mục và `<title>` là xong. Dạng này chính xác nhất vì id, nhóm, `e`/`w` đều do file nói rõ.
+
+**Dạng 2 — file viết tay, hạng mục nằm trong HTML**: không có mảng dữ liệu nào, mỗi hạng mục là một
+ô `<input type="checkbox">` kèm tiêu đề. Hub đọc cấu trúc trong một `<template>` inert và suy ra:
+
+| Trong file | Thành |
+|---|---|
+| `<section>` / `.grp`, hoặc heading đứng trước hạng mục | nhóm |
+| `<h1>`–`<h6>` đầu của nhóm | tiêu đề nhóm |
+| `.pill`/`.tag`/`.chip` trong heading (chữ ngắn, vd `P0`) | mã nhóm + màu chip (`p0` → `t-p0`) |
+| `.note` trong nhóm, hoặc thẻ ngay sau heading | phần dẫn của nhóm |
+| `<details>`, `<li>`, `.item`… chứa ô checkbox | một hạng mục |
+| `<summary>` / `<label>` / `.ttl` | tiêu đề hạng mục |
+| `.body`, hoặc phần còn lại của `<details>` | hướng dẫn chi tiết |
+| `data-id` của ô checkbox → `id` → chip `.id` trong tiêu đề → **hash tiêu đề** | id hạng mục |
+
+Nên khai `data-id` cho từng ô checkbox. Không có thì id suy từ **hash của tiêu đề** — ổn định khi
+chèn/đổi thứ tự hạng mục (khác với suy theo vị trí, kiểu đó chèn một dòng là tick trượt hết), nhưng
+sửa chữ trong tiêu đề là mất tick của đúng hạng mục đó. Hub cảnh báo rõ khi phải suy id.
+
+Ô checkbox không có tiêu đề (nút "chọn tất cả", ô trong form) bị bỏ kèm cảnh báo, không chặn cả file.
+Trùng id thì được thêm hậu tố `-2`, `-3` để tick không ghi chồng.
+
+Thứ tự thử là **dạng 1 trước**: file nào khai `SECTIONS` thì vẫn đọc y như trước, đường DOM không
+chạm tới.
+
+### Mã checklist
+
+`CHECKLIST_ID` là tuỳ chọn ở cả hai dạng:
 
 - File **có khai** → ô Mã checklist điền sẵn từ file và bị khoá. File là nguồn thật.
 - File **không khai** → mã suy từ tên file (`webnovel-ngon-tinh-checklist.html` →
   `webnovel-ngon-tinh-checklist`), ô cho sửa. Đây là trường hợp của các file checklist bản cũ chạy
-  độc lập (lưu tick trong `localStorage`) — chúng không có mã vì ra đời trước khi có Supabase.
+  độc lập (lưu tick trong `localStorage`) — chúng không có mã vì ra đời trước khi có Supabase, và
+  của mọi file dạng 2.
 
 Mã đó là **khoá gắn tick trong DB**, nên chỉ cần nó đúng và **ổn định**. Sau khi upload thì đừng
 đổi: đổi mã là tick của checklist đó thành mồ côi. Đổi tên file `.html` ở máy thì không sao.
 
-Engine tick riêng của file (nếu có) bị bỏ hoàn toàn — chỉ `CHECKLIST_ID`, `SCORES`, `SECTIONS` được
-lấy, còn lại `checklist.html` render bằng `assets/sync.js` dùng chung. Tick đang có trong
-`localStorage` của file cũ **không tự chuyển sang DB**; muốn giữ thì phải seed bằng SQL.
+Engine tick riêng của file (nếu có) bị bỏ hoàn toàn — chỉ dữ liệu hạng mục được lấy, còn lại
+`checklist.html` render bằng `assets/sync.js` dùng chung. Tick đang có trong `localStorage` của file
+cũ **không tự chuyển sang DB**; muốn giữ thì phải seed bằng SQL.
 
 Muốn sửa nội dung về sau: sửa file ở máy rồi upload lại chính nó. **Tick đã có vẫn giữ nguyên**
 vì tick gắn với `item_id`, không gắn với nội dung.
@@ -127,6 +159,15 @@ nên không mất nội dung. Lọc chạy **hai lần**: lúc upload và lúc r
 Việc bóc `SCORES`/`SECTIONS` phải chạy chính JS của file (đó là JS literal, không phải JSON). Nó chạy
 trong `<iframe sandbox="allow-scripts">` không có `allow-same-origin`: origin mờ, không đọc được DOM
 của hub, không đọc được `localStorage`, không thấy anon key. Đường ra duy nhất là `postMessage`.
+
+File **dạng 2** không có JS nào cần chạy, nên nó **không** đi qua sandbox: `parseDomChecklist()` nhét
+HTML vào một `<template>` rồi đi cây `template.content`. Nội dung template là **inert** — thuộc một
+document không có browsing context, nên script không chạy và `<img>`/`<iframe>`/`<link>` không tải.
+Cố tình không dùng `srcdoc` để đọc DOM (kéo theo `<script src>` và mọi request của file), và cũng
+không dùng `DOMParser` ở chỗ này: document của nó cũng rời, nhưng tính chất "không fetch" phải suy từ
+điều kiện "fully active" thay vì được nói thẳng ở tầng API. Dù đi đường nào, mọi HTML lấy ra vẫn qua
+đúng một `validateDef()` → `sanitizeHtml()`. Bước 11 mục kiểm tay là chỗ chứng minh phần "0 request"
+trên browser thật.
 
 Chính vì origin mờ mà engine của file checklist bản cũ **ném lỗi** khi nó đọc `localStorage` — và
 điều đó không sao: hai thẻ `<script>` dùng chung phạm vi global, nên `SECTIONS` khai ở trên vẫn bóc
@@ -182,13 +223,14 @@ node --check assets/sync.js        # cú pháp JS
 node --check assets/hub.js
 node --check assets/sanitize.js
 node --check assets/parse-def.js
-node tools/test/test.js            # 90 test: hàng đợi, gộp dữ liệu, chống mất tick, sanitize, parse
+node tools/test/test.js            # 123 test: hàng đợi, gộp dữ liệu, chống mất tick, sanitize, parse
 ```
 
-`sanitize.js` cần `DOMParser` — node không có, và repo không có dependency, nên test dùng
-`tools/test/dom-shim.js` (bản tự viết vừa đủ). Nó kiểm được **logic whitelist**, nhưng không mô
-phỏng được các mánh ở tầng parser của browser thật. Vì vậy phần XSS vẫn phải kiểm tay một lần trên
-browser theo mục dưới.
+`sanitize.js` cần `DOMParser`, `parse-def.js` cần `document.createElement('template')` — node không
+có, và repo không có dependency, nên test dùng `tools/test/dom-shim.js` (bản tự viết vừa đủ). Nó kiểm
+được **logic whitelist** và phần suy cấu trúc, nhưng không mô phỏng được các mánh ở tầng parser của
+browser thật, cũng không nói được gì về chuyện browser có gửi request hay không. Vì vậy phần XSS và
+phần "0 request" vẫn phải kiểm tay một lần trên browser theo mục dưới.
 
 ## Kiểm tay phần upload (một lần, trên browser)
 
@@ -208,6 +250,17 @@ Chạy `python3 -m http.server 8899` rồi:
 8. Nút **Xoá**: thẻ `webnovel-vn` **không có** nút; thẻ `test-up` có. Gõ sai mã → không xoá gì. Gõ
    đúng → thẻ biến mất, thông báo nói đúng số tick đã xoá, và mở lại `checklist.html?id=test-up`
    phải báo "không có checklist nào mang mã này".
+9. **File dạng 2** (hạng mục nằm trong HTML, không khai `SECTIONS`): upload một file kiểu đó → hộp
+   tóm tắt phải nói "đọc theo cấu trúc HTML", số nhóm/hạng mục khớp với file, mở ra tick được. Bước
+   này phải kiểm trên browser thật vì `tools/test/dom-shim.js` không phải parser của browser.
+10. Upload một file HTML **không phải checklist** (một bài viết bất kỳ) → bị từ chối kèm câu nói rõ
+    cần `const SECTIONS` hoặc ô checkbox, **không** tạo checklist rỗng.
+11. **Không có request nào ra ngoài khi đọc file dạng 2**: nhét `<img src="https://example.com/a.png">`,
+    `<link rel="stylesheet" href="https://example.com/a.css">` và `<iframe src="https://example.com/">`
+    vào file đó, mở tab Network của DevTools (Disable cache, filter `example.com`) rồi chọn file →
+    phải **0 request**. Nội dung `<template>` là inert nên theo spec nó không tải subresource, nhưng
+    đây là thứ chỉ browser thật chứng minh được. Nhân đó kiểm luôn phần render: mở checklist vừa
+    upload, cũng phải 0 request tới `example.com` (`sanitizeHtml` bỏ hẳn `<img>`/`<iframe>`/`<link>`).
 
 Dọn sau khi xong: xoá `test-up.html` ở máy. Nếu đã dùng nút Xoá thì DB sạch rồi; nếu chưa, chạy
 `delete from checklist_progress where checklist_id='test-up';` rồi

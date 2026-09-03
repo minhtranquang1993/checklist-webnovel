@@ -49,8 +49,10 @@ h1{margin:0 0 6px;font-size:26px;letter-spacing:-.3px}
 section{margin:30px 0 0}
 .sechead{display:flex;align-items:center;gap:10px;margin-bottom:6px}
 .sechead h2{margin:0;font-size:19px;letter-spacing:-.2px}
+/* Nền mặc định vì `tag` đến từ file người dùng upload: file khai tag lạ (hoặc không
+   khai) thì chip vẫn đọc được, không thành chữ đen trên nền đen. */
 .tag{font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;
-  letter-spacing:.4px;color:#0d1016}
+  letter-spacing:.4px;color:#0d1016;background:var(--muted)}
 .t-p0{background:var(--p0)}.t-p1{background:var(--p1)}.t-p2{background:var(--p2)}
 .t-p3{background:var(--p3)}.t-geo{background:var(--geo)}.t-bl{background:var(--bl)}
 .secnote{color:var(--muted);font-size:13.5px;margin:0 0 14px}
@@ -93,6 +95,13 @@ th{background:#0c0e13;color:var(--muted);font-weight:600}
 .callout.good b{color:var(--ok)}
 .effort{display:inline-block;font-size:11px;color:var(--muted);border:1px solid var(--line);
   border-radius:5px;padding:1px 7px;margin-left:8px;vertical-align:1px}
+
+/* File upload không nhất thiết có `e`, `w`, hay phần hướng dẫn — checklist viết tay
+   thường chỉ có tiêu đề. sync.js vẫn render đủ ba khối, nên chúng phải tự ẩn khi rỗng:
+   không thì mỗi dòng đeo một ô viền trống, và bấm vào dòng thì mở ra một dải trống. */
+.effort:empty,.why:empty{display:none}
+.item.open .body:empty{display:none}
+.item:has(.body:empty) .exp{visibility:hidden}
 .hidden{display:none !important}
 footer{margin-top:50px;padding-top:18px;border-top:1px solid var(--line);
   color:var(--muted);font-size:13px}

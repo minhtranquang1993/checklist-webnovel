@@ -239,13 +239,14 @@ console.log('\nTEST 12 — writeAt/confirmedAt chi nhan id hop le, khong phinh v
 console.log('\n' + '='.repeat(50));
 console.log('PHAN 2 — sanitize.js + parse-def.js (checklist upload tu trang hub)');
 
-/* Node khong co DOMParser. tools/test/dom-shim.js la ban tu viet vua du cho
-   sanitize.js (repo khong co dependency). Gan vao global TRUOC khi require
-   sanitize.js, vi module do doc `typeof DOMParser` luc chay ham. */
+/* Node khong co DOM. tools/test/dom-shim.js la ban tu viet vua du cho sanitize.js
+   (DOMParser) va parse-def.js (document.createElement('template')). Gan vao global
+   TRUOC khi require sanitize.js, vi module do doc `typeof DOMParser` luc chay ham. */
 global.DOMParser = require('./dom-shim.js').DOMParser;
+global.document = require('./dom-shim.js').document;
 const { sanitizeHtml } = require('../../assets/sanitize.js');
 const {
-  validateDef, extractInlineScript, slugFromFilename,
+  validateDef, extractInlineScript, slugFromFilename, parseDomChecklist,
 } = require('../../assets/parse-def.js');
 
 /* Def toi thieu, hop le. Moi test sua mot cho de kiem dung mot luat. */
@@ -330,6 +331,119 @@ console.log('\nTEST 14b — slugFromFilename: suy ma tu ten file khi file khong 
   /* Tieng Viet co dau: khong tu y bo dau thanh chu khong dau, chi doi thanh gach.
      Ket qua van la ma hop le, va nguoi dung sua duoc. */
   ok(/^[a-z0-9][a-z0-9-]*$/.test(s('Truyện ngôn tình.html')), 'ten co dau van ra ma hop le');
+}
+
+console.log('\nTEST 14c — parseDomChecklist: file viet tay (hang muc nam trong HTML, khong khai SECTIONS)');
+{
+  const domFile = [
+    '<!DOCTYPE html><html><head><title>Checklist ngon tinh &amp; hon the</title></head><body>',
+    '<h1>Checklist</h1><p class="sub">Ban rut gon</p>',
+    '<section class="grp">',
+    '  <h2><span class="pill p0">P0</span> Blocker phan trang</h2>',
+    '  <p class="note">Lam <b>truoc</b> nhom nay.</p>',
+    '  <details class="item p0"><summary><input type="checkbox" data-id="p0-1">',
+    '    <span class="ttl"><span class="id">P0-1</span> Phan trang rong</span></summary>',
+    '    <div class="body"><h4>Sua thanh</h4><p>Phat link trang.</p><script>alert(1)</script></div>',
+    '  </details>',
+    '  <details class="item p0"><summary><input type="checkbox" data-id="p0-2">',
+    '    <span class="ttl">Thieu canonical</span></summary>',
+    '    <div class="body"><p>Them canonical.</p></div>',
+    '  </details>',
+    '</section>',
+    '<section class="grp">',
+    '  <h2><span class="pill p4">P4</span> Server</h2>',
+    '  <details class="item"><summary><input type="checkbox"> Bat brotli</summary>',
+    '    <div class="body">x</div></details>',
+    '</section>',
+    '</body></html>',
+  ].join('\n');
+
+  const d = parseDomChecklist(domFile);
+  const r = validateDef(Object.assign({}, d.raw, { id: 'ngon-tinh' }), false);
+  const S = r.def.sections;
+
+  ok(S.length === 2, '2 nhom (h4 trong phan huong dan khong thanh nhom): ' + S.length);
+  ok(r.def.total === 3, 'dem dung 3 hang muc: ' + r.def.total);
+  ok(S[0].id === 'P0' && S[1].id === 'P4', 'ma nhom lay tu chip pill');
+  ok(S[0].tag === 't-p0' && S[1].tag === 't-p4', 'tag suy tu class phu cua pill');
+  ok(S[0].title === 'Blocker phan trang', 'tieu de nhom bo chu trong pill: ' + S[0].title);
+  ok(S[0].note === 'Lam <b>truoc</b> nhom nay.', 'note cua nhom giu dinh dang: ' + S[0].note);
+  ok(S[0].items.map(i => i.id).join(',') === 'p0-1,p0-2', 'id lay tu data-id cua o checkbox');
+  ok(S[0].items[0].t === 'Phan trang rong', 'tieu de bo chip so hieu: ' + S[0].items[0].t);
+  ok(/Phat link trang/.test(S[0].items[0].b), 'giu phan huong dan lam body');
+  ok(!/<script/i.test(S[0].items[0].b), 'script trong body bi loc');
+  ok(!/Phan trang rong/.test(S[0].items[0].b), 'body khong lap lai tieu de');
+  ok(r.def.meta.title === 'Checklist ngon tinh & hon the',
+     'ten lay tu <title>, giai ma entity: ' + r.def.meta.title);
+  ok(r.def.meta.sub === 'Ban rut gon', 'mo ta lay tu .sub');
+
+  /* O checkbox khong khai data-id: id suy tu HASH TIEU DE, khong phai vi tri. */
+  ok(/^it-/.test(S[1].items[0].id), 'khong co data-id -> id suy ra: ' + S[1].items[0].id);
+  ok(d.warnings.some(w => /data-id/.test(w)), 'co canh bao ve id suy ra');
+  ok(d.warnings.some(w => /SECTIONS/.test(w)), 'noi ro file duoc doc theo cau truc HTML');
+
+  /* Dinh tuyen: file co CA SECTIONS lan checkbox thi phai di duong 1 (chay script). */
+  const both = '<script>const SECTIONS=[];</script>' + domFile;
+  ok(extractInlineScript(both) !== '', 'file co SECTIONS van di duong sandbox, khong doc DOM');
+}
+
+console.log('\nTEST 14d — parseDomChecklist: nhom theo heading, id trung, o khong co tieu de');
+{
+  const flat = [
+    '<body><h2>Nhom A</h2><p class="note">Dan nhap.</p>',
+    '<ul><li><label><input type="checkbox"> Viec A</label></li>',
+    '<li><label><input type="checkbox"> Viec A</label></li></ul>',
+    '<h2>Nhom B</h2>',
+    '<div class="item"><label><input type="checkbox"> Viec B</label>',
+    '  <div class="body"><p>chi tiet</p></div></div>',
+    '<div class="tools"><input type="checkbox"><button>chon het</button></div>',
+    '</body>',
+  ].join('\n');
+
+  const d = parseDomChecklist(flat);
+  const S = d.raw.sections;
+  ok(S.length === 2, 'file khong bpc <section> van tach nhom theo <h2>: ' + S.length);
+  ok(S[0].id === 'nhom-a' && S[0].title === 'Nhom A', 'ma nhom suy tu tieu de: ' + S[0].id);
+  ok(S[0].note === 'Dan nhap.', 'note la the ngay sau heading: ' + S[0].note);
+  ok(S[1].items[0].b === '<p>chi tiet</p>', 'body lay tu .body: ' + S[1].items[0].b);
+
+  const ids = S[0].items.map(i => i.id);
+  ok(ids.length === 2 && ids[0] !== ids[1], 'hai hang muc trung tieu de van ra 2 id khac nhau');
+  ok(d.warnings.some(w => /id bị trùng/.test(w)), 'co canh bao id trung');
+  ok(d.warnings.some(w => /không có tiêu đề/.test(w)), 'bo o checkbox trong thanh cong cu + canh bao');
+  ok(d.raw.sections.reduce((n, s) => n + s.items.length, 0) === 3, 'o trong .tools khong thanh hang muc');
+
+  /* Id phai ON DINH: chen mot hang muc moi len dau roi upload lai KHONG duoc lam
+     doi id cua hang muc cu — neu doi thi tick nhay sang cho khac ma khong ai thay. */
+  const again = parseDomChecklist(flat);
+  ok(again.raw.sections[1].items[0].id === S[1].items[0].id, 'doc lai file -> id khong doi');
+  const inserted = parseDomChecklist(flat.replace(
+    '<h2>Nhom A</h2>',
+    '<h2>Nhom A</h2><div class="item"><label><input type="checkbox"> Viec moi</label></div>'
+  ));
+  const findT = (def, t) => def.sections.reduce((hit, s) =>
+    hit || s.items.find(i => i.t === t) || null, null);
+  ok(findT(inserted.raw, 'Viec B').id === findT(d.raw, 'Viec B').id,
+     'chen hang muc moi -> id hang muc cu giu nguyen');
+
+  /* O tick tran, khong co the boc rieng: tieu de la chu dung ngay sau no. */
+  const bare = '<body><h2>Nhom</h2><p><input type="checkbox" data-id="a"> Viec A<br>' +
+    '<input type="checkbox" data-id="b"> Viec B</p></body>';
+  const B = parseDomChecklist(bare).raw.sections;
+  ok(B.length === 1 && B[0].id === 'nhom', 'nhom suy tu <h2> khi khong co <section>: ' + B[0].id);
+  ok(B[0].items.map(i => i.id).join(',') === 'a,b', 'id van lay tu data-id');
+  ok(B[0].items.map(i => i.t).join('|') === 'Viec A|Viec B',
+     'tieu de doc tu chu sau o tick: ' + B[0].items.map(i => i.t).join('|'));
+}
+
+console.log('\nTEST 14e — parseDomChecklist: file khong phai checklist -> noi ro can gi');
+{
+  throws(() => parseDomChecklist('<html><body><h1>Bao cao</h1><p>xin chao</p></body></html>'),
+    /SECTIONS/, 'khong co SECTIONS lan checkbox -> nem loi noi ca hai dang');
+  throws(() => parseDomChecklist('<body><p>x</p></body>'), /checkbox/,
+    'thong bao nhac toi o checkbox');
+  throws(() => parseDomChecklist('<body><input type="checkbox"></body>'), /không ô nào có tiêu đề/,
+    'co o tick nhung khong co chu -> noi thieu tieu de');
 }
 
 console.log('\nTEST 15 — validateDef: def hop le -> dem dung, HTML da duoc loc');

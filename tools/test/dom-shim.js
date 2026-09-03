@@ -1,11 +1,12 @@
 /* ============================================================
-   dom-shim.js — DOMParser tối giản để test assets/sanitize.js bằng node
+   dom-shim.js — DOMParser + document tối giản để test bằng node
    ------------------------------------------------------------
-   Repo cố tình không có dependency, mà node không có DOMParser, nên đây là bản tự
-   viết vừa đủ cho những API sanitize.js dùng:
-     nodeType, localName/nodeName, childNodes, firstChild, parentNode,
-     attributes, getAttribute/setAttribute/removeAttribute,
-     insertBefore/removeChild, innerHTML (đọc).
+   Repo cố tình không có dependency, mà node không có DOM, nên đây là bản tự viết vừa
+   đủ cho những API hai module dưới dùng:
+     - assets/sanitize.js: nodeType, localName/nodeName, childNodes, firstChild,
+       parentNode, attributes, getAttribute/setAttribute/removeAttribute,
+       insertBefore/removeChild, innerHTML (đọc).
+     - assets/parse-def.js: thêm `document.createElement('template')` + `.content`.
 
    GIỚI HẠN — đọc trước khi tin vào kết quả test:
    Shim này kiểm được **logic whitelist** (tag nào xoá, tag nào unwrap, attribute nào
@@ -198,4 +199,21 @@ class DOMParser {
   }
 }
 
-module.exports = { DOMParser, Element, Text, parse };
+/* `document` tối giản, chỉ đủ cho `document.createElement('template')` mà
+   parse-def.js dùng để đọc file checklist dạng 2. Ở browser, nội dung template là
+   inert (không chạy script, không tải ảnh) — chuyện đó shim không mô phỏng được và
+   cũng không cần: shim chỉ kiểm phần suy cấu trúc. */
+const document = {
+  createElement(name) {
+    if (String(name).toLowerCase() !== 'template') {
+      throw new Error('dom-shim chi ho tro createElement("template")');
+    }
+    return {
+      content: null,
+      set innerHTML(v) { this.content = parse(v); },
+      get innerHTML() { return this.content ? this.content.innerHTML : ''; },
+    };
+  },
+};
+
+module.exports = { DOMParser, document, Element, Text, parse };

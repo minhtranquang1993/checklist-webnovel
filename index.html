@@ -25,13 +25,14 @@
 <div class="addbox" id="upbox" hidden>
   <h3>Upload file HTML làm checklist mới</h3>
   <p class="hint">Chọn file <code>.html</code> ở máy — nội dung hạng mục được đọc ra và lưu lên
-  server, <b>không cần push repo, không cần chờ deploy</b>. File chỉ cần khai
-  <code>SECTIONS</code> (và <code>SCORES</code> nếu muốn có bảng điểm); mã checklist thì suy từ tên
-  file nếu file không tự khai.</p>
+  server, <b>không cần push repo, không cần chờ deploy</b>. Nhận hai dạng file: file khai
+  <code>SECTIONS</code> (như <code>webnovel-vn.html</code>), hoặc file viết tay có mỗi hạng mục là một
+  ô <code>&lt;input type="checkbox"&gt;</code> kèm tiêu đề. Mã checklist suy từ tên file nếu file
+  không tự khai.</p>
   <div class="frow">
     <label>File HTML <span class="req">*</span>
       <input type="file" id="uFile" accept=".html,.htm,text/html">
-      <em>Copy <code>webnovel-vn.html</code> rồi sửa dữ liệu hạng mục.</em>
+      <em>Dạng checkbox: nên có <code>data-id</code> ở mỗi ô để tick không lệch khi sửa file.</em>
     </label>
     <label>Mã checklist <span class="req">*</span>
       <input type="text" id="uId" placeholder="tự điền sau khi chọn file" maxlength="40" autocomplete="off">
