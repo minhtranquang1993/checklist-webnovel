@@ -51,6 +51,23 @@ let flushing = false;
 let retryTimer = null;
 let lastError = '';
 
+/* Retry khi server tạm dừng / mất kết nối. DB pause thì lần gọi đầu fail nhưng
+   thường tỉnh lại sau ~1-2 phút, nên trang tự thử lại vài lần (chạy nền, không
+   block cache trong máy). `pullToken` chống retry chồng chéo: mỗi lần pull() mới
+   sẽ tăng token và huỷ timer cũ; response của chuỗi cũ thấy token đã khác thì bị
+   bỏ qua, không ghi đè dữ liệu mới.
+
+   So `err.name`, KHÔNG dùng `err instanceof TypeError`: lỗi mạng từ fetch có thể
+   đến từ realm khác (iframe, worker) nên instanceof so với TypeError của trang là
+   false -> hết cả lỗi mạng thật cũng không retry. */
+let pullToken = 0;
+let pullRetryTimer = null;
+const PULL_RETRY_DELAYS = [15000, 30000, 45000];
+function retryablePull(err) {
+  if (err && typeof err.status === 'number') return err.status >= 500 || err.status === 429;
+  return !!err && err.name === 'TypeError';           // lỗi mạng thật, không phải lỗi parse
+}
+
 /* ---------- tiện ích ---------- */
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const $ = id => document.getElementById(id);
@@ -286,15 +303,25 @@ function localWins(id, startedAt) {
 }
 
 async function pull(manual) {
+  const token = ++pullToken;
+  if (pullRetryTimer) { clearTimeout(pullRetryTimer); pullRetryTimer = null; }
+  return runPull(token, manual, 0);
+}
+
+async function runPull(token, manual, attempt) {
   const startedAt = Date.now();
-  if (manual) setStatus('load', 'Đang tải lại…');
+  if (manual && token === pullToken) setStatus('load', 'Đang tải lại…');
   try {
     const url = `${REST}?select=item_id,done,updated_by,updated_at` +
       `&checklist_id=eq.${encodeURIComponent(CHECKLIST_ID)}`;
     const res = await fetch(url, { headers: HDRS, cache: 'no-store' });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (!res.ok) { const e = new Error('HTTP ' + res.status); e.status = res.status; throw e; }
     const rows = await res.json();
     if (!Array.isArray(rows)) throw new Error('phản hồi không hợp lệ');
+
+    /* Response của chuỗi pull cũ: đã có lần pull mới hơn (Tải lại, online,
+       visibilitychange) chạy rồi — bỏ qua để dữ liệu mới không bị ghi đè ngược. */
+    if (token !== pullToken) return false;
 
     const fresh = {};
     rows.forEach(r => {
@@ -317,8 +344,29 @@ async function pull(manual) {
     flush();
     return true;
   } catch (err) {
-    lastError = 'Không tải được từ server — đang xem bản trong máy' +
-      (pendingCount() ? ` · ${pendingCount()} chưa lưu` : '');
+    if (token !== pullToken) return false;             // chuỗi cũ, không đụng UI
+
+    /* Cache trong máy vẫn đang hiển thị và GIỮ NGUYÊN như hành vi cũ — retry chỉ
+       chạy nền, không block, không xoá gì. Message cũ cũng giữ nguyên để người dùng
+       biết ngay là đang xem bản trong máy. */
+    const pendingNote = pendingCount() ? ` · ${pendingCount()} chưa lưu` : '';
+
+    if (retryablePull(err) && attempt < PULL_RETRY_DELAYS.length) {
+      lastError = 'Không tải được từ server — đang xem bản trong máy' + pendingNote +
+        ' — đang tự thử lại…';
+      refreshStatus();
+      pullRetryTimer = setTimeout(() => {
+        if (token !== pullToken) return;
+        pullRetryTimer = null;                        // timer đã fire, không còn pending
+        runPull(token, false, attempt + 1);
+      }, PULL_RETRY_DELAYS[attempt]);
+      return false;
+    }
+
+    lastError = 'Không tải được từ server — đang xem bản trong máy' + pendingNote +
+      (retryablePull(err)
+        ? '. Nếu Supabase bị pause, vào dashboard bấm Restore rồi tải lại trang.'
+        : '');
     refreshStatus();
     return false;
   }

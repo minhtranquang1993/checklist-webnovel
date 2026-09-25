@@ -112,7 +112,41 @@ let checklists = [];
    mất — con số đó là thứ quyết định người dùng có bấm tiếp hay không. */
 let lastStats = {};
 
+/* ---------- retry khi server tạm dừng / mất kết nối ---------- */
+/* DB pause thì lần gọi đầu sẽ fail (network error hoặc 5xx), nhưng thường chỉ
+   ~1-2 phút sau là tỉnh lại. Thay vì bắt người dùng tự bấm F5, trang tự thử lại
+   vài lần với backoff, và nói rõ việc gì đang xảy ra.
+
+   `loadToken` chống retry chồng chéo: mỗi lần load() chạy mới sẽ tăng token và
+   huỷ timer cũ. Response của chuỗi cũ khi về thấy token đã khác thì bị bỏ qua
+   — không vẽ status, không ghi dữ liệu — nên nút Tải lại hay lần tự retry sau
+   luôn thắng, không bao giờ bị một response cũ ghi đè. */
+let loadToken = 0;
+let loadRetryTimer = null;
+const RETRY_DELAYS = [15000, 30000, 45000];
+const MSG_WAKE = 'Server đang tạm dừng hoặc mất kết nối, đang thử lại…';
+const MSG_GIVEUP = 'Vẫn chưa kết nối được. Nếu Supabase bị pause, vào dashboard bấm Restore rồi tải lại trang.';
+
+/* Lỗi đáng retry: mất mạng (fetch reject) hoặc server 5xx / 429.
+   Lỗi 4xx là lỗi dữ liệu thật — retry cũng không khá hơn.
+   Lỗi không có status mà KHÔNG phải lỗi mạng (vd "phản hồi không hợp lệ") là lỗi
+   parse/contract bên ta, không phải DB pause: retry chỉ che lỗi thật và bắt người
+   dùng đi Restore oan.
+   So `err.name` chứ không `err instanceof TypeError` — lỗi mạng từ fetch có thể
+   đến từ realm khác (iframe, worker) nên instanceof so với TypeError của trang là
+   false, hết cả lỗi mạng thật cũng không retry. */
+function retryable(err) {
+  if (err && typeof err.status === 'number') return err.status >= 500 || err.status === 429;
+  return !!err && err.name === 'TypeError';
+}
+
 async function load() {
+  const token = ++loadToken;
+  if (loadRetryTimer) { clearTimeout(loadRetryTimer); loadRetryTimer = null; }
+  return runLoad(token, 0);
+}
+
+async function runLoad(token, attempt) {
   try {
     const [resList, resProg] = await Promise.all([
       fetch(`${REST}/checklists?select=id,name,file,descr,total,kind&order=created_at`,
@@ -120,12 +154,16 @@ async function load() {
       fetch(`${REST}/checklist_progress?select=checklist_id,done,updated_by,updated_at&done=is.true`,
         { headers: SB_HEADERS, cache: 'no-store' }),
     ]);
-    if (!resList.ok) throw new Error('HTTP ' + resList.status);
-    if (!resProg.ok) throw new Error('HTTP ' + resProg.status);
+    if (!resList.ok) { const e = new Error('HTTP ' + resList.status); e.status = resList.status; throw e; }
+    if (!resProg.ok) { const e = new Error('HTTP ' + resProg.status); e.status = resProg.status; throw e; }
 
     const list = await resList.json();
     const rows = await resProg.json();
     if (!Array.isArray(list) || !Array.isArray(rows)) throw new Error('phản hồi không hợp lệ');
+
+    /* Response của một chuỗi load cũ: đã có lần load mới hơn chạy, bỏ qua hoàn toàn
+       để không ghi đè trạng thái mới bằng dữ liệu cũ. */
+    if (token !== loadToken) return;
 
     /* Chỉ hiện checklist mà mình dựng được href an toàn cho nó. Kiểm lại ở client
        chứ không chỉ tin DB, vì href là thứ duy nhất do dữ liệu người dùng quyết định:
@@ -147,7 +185,19 @@ async function load() {
     paint(checklists, stats);
     setStatus('ok', 'Tiến độ mới nhất từ server');
   } catch (err) {
-    setStatus('err', 'Không tải được danh sách — thử tải lại trang');
+    if (token !== loadToken) return;                   // chuỗi cũ, không đụng UI
+
+    if (retryable(err) && attempt < RETRY_DELAYS.length) {
+      setStatus('err', MSG_WAKE);
+      loadRetryTimer = setTimeout(() => {
+        if (token !== loadToken) return;
+        loadRetryTimer = null;                         // timer đã fire, không còn pending
+        runLoad(token, attempt + 1);
+      }, RETRY_DELAYS[attempt]);
+      return;
+    }
+
+    setStatus('err', retryable(err) ? MSG_GIVEUP : 'Không tải được danh sách — thử tải lại trang');
   }
 }
 /* ---------- form đăng ký file trong repo (cách cũ) ---------- */

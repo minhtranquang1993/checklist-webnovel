@@ -19,6 +19,30 @@ sau đó. Nếu sửa `webnovel-vn.html` hay `assets/config.js` theo cách này 
 `python3 tools/verify.py` ở máy trước** — nó là thứ chặn `total` bị lệch và item id bị đổi tên
 làm mất tick, và giao diện web không chạy được nó.
 
+## Chống pause DB (Supabase free)
+
+Supabase gói free **tự pause database sau khoảng 7 ngày không có request nào**. Dự án này là
+trang static nên có ngày không ai mở → DB ngủ → lần mở sau phải vào dashboard bấm **Restore**
+mới chạy lại, mất ~1-2 phút.
+
+Đã xử lý bằng `.github/workflows/supabase-keepalive.yml`: mỗi ngày (02:17 UTC ~ 09:17 giờ VN)
+workflow gọi một request đọc nhẹ (`select id ... limit=1`) để Supabase tính dự án là "active",
+nhờ vậy **không bị pause và không phải Restore bằng tay**.
+
+- **Zero-setup**: URL + anon key đọc thẳng từ `assets/config.js` (anon key vốn public trong repo),
+  không cần tạo GitHub secret. Không dùng service_role key, không dùng Management API.
+- **Log an toàn**: workflow không in key hay header `Authorization`, chỉ log host + HTTP status.
+- Nếu DB **đã pause trước khi bật workflow**: cron không tự Restore được — vào dashboard bấm
+  **Restore** một lần, sau đó cron sẽ giữ cho DB không ngủ lại. Trang web cũng tự thử lại vài lần
+  và hiện hướng dẫn này khi không kết nối được.
+
+Lưu ý: GitHub **tự tắt scheduled workflow sau 60 ngày repo không có activity**. Repo này push
+thường xuyên nên không sao; nếu về sau repo ngủ 60 ngày, vào tab **Actions** bật lại hoặc
+chạy tay một lần (`Run workflow`).
+
+Kiểm tra nhanh: tab **Actions** → chọn workflow *Supabase keep-alive* → **Run workflow** →
+job phải xanh và log in `HTTP 200`.
+
 ## Dùng thế nào
 
 1. Mở trang, nhập tên một lần (lưu trong máy, không cần mật khẩu).

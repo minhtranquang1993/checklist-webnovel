@@ -1,0 +1,68 @@
+name: Supabase keep-alive
+
+# Supabase free tu pause database sau khoang 7 ngay khong co request nao.
+# Workflow nay goi mot request doc nhe (1 row) moi ngay de du an duoc tinh la
+# "active", nho do khong bi pause va khong phai vao dashboard Restore bang tay.
+#
+# Zero-setup: URL va anon key doc thang tu assets/config.js — anon key von public
+# trong repo (no duoc thiet ke de nhung vao trang public), nen khong can tao
+# GitHub secret va khong nhan ban key ra hai noi. KHONG dung service_role key,
+# KHONG dung Management API / access token (xem README muc "Chong pause DB").
+
+on:
+  schedule:
+    # 02:17 UTC ~ 09:17 gio VN. Gio le de tranh dut vao :00 nhu moi cron khac.
+    - cron: '17 2 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ping Supabase (doc 1 row)
+        shell: bash
+        run: |
+          # Cam trace lenh: khong dung set -x, va tat no neu bat ngo duoc bat.
+          set +x
+          set -euo pipefail
+
+          SB_URL=$(sed -n "s/^const SUPABASE_URL = '\(.*\)';$/\1/p" assets/config.js)
+          SB_KEY=$(sed -n "s/^const SUPABASE_ANON_KEY = '\(.*\)';$/\1/p" assets/config.js)
+
+          # Fail-fast: parse config.js sai thi phai bao hong ngay, khong duoc
+          # "chay xanh" ma thuc ra khong ping gi ca (do la loi nguy hiem nhat:
+          # tuong duoc bao ve nhung khong).
+          if [ -z "$SB_URL" ] || [ -z "$SB_KEY" ]; then
+            echo "::error::Khong doc duoc SUPABASE_URL / SUPABASE_ANON_KEY tu assets/config.js"
+            exit 1
+          fi
+
+          # Chi log host, khong bao gio log key hay header Authorization.
+          SB_HOST=${SB_URL#*://}
+          SB_HOST=${SB_HOST%%/*}
+          echo "Pinging https://$SB_HOST/rest/v1/checklists?select=id&limit=1"
+
+          CODE=$(curl -sS -o /tmp/keepalive.out -w '%{http_code}' --max-time 30 \
+            "$SB_URL/rest/v1/checklists?select=id&limit=1" \
+            -H "apikey: $SB_KEY" \
+            -H "Authorization: Bearer $SB_KEY" || echo "000")
+
+          echo "HTTP $CODE"
+
+          if [ "$CODE" != "200" ]; then
+            echo "::error::Keep-alive that bai (HTTP $CODE). DB co the dang pause - vao Supabase dashboard bam Restore."
+            head -c 300 /tmp/keepalive.out || true
+            echo
+            exit 1
+          fi
+
+          echo "OK - database dang hoat dong."
